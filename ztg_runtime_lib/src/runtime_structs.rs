@@ -1,7 +1,7 @@
 use ink::primitives::AccountId;
 use sp_runtime::MultiAddress;
 
-use crate::ztg_primitives::*;
+use crate::primitives::*;
 
 #[derive(scale::Encode, scale::Decode)]
 pub enum RuntimeCall {
