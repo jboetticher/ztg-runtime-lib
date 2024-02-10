@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
 mod runtime_structs;
+mod ztg_primitives;
 
 #[ink::contract]
 mod ztg_runtime_lib {

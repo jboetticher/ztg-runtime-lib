@@ -1,0 +1,38 @@
+[package]
+name = "ztg_runtime_example"
+version = "0.1.0"
+authors = ["Jeremy Boetticher jeremy@projk.net"]
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+ink = { version = "4.3.0", default-features = false }
+
+scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
+scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
+sp-io = { version = "30.0.0", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
+sp-runtime = { version = "31.0.1", default-features = false }
+
+ztg_runtime_lib = { path = "../ztg_runtime_lib", default-features = false, features = ["ink-as-dependency"] }
+
+[dev-dependencies]
+ink_e2e = "4.3.0"
+
+[lib]
+path = "lib.rs"
+
+[features]
+default = ["std"]
+std = [
+    "ink/std",
+    "scale/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-io/std"
+]
+ink-as-dependency = []
+e2e-tests = []
+
+# Assumes that the node used in E2E testing allows using the `call-runtime` API, including triggering
+# `Balances::transfer` extrinsic.
+permissive-node = []

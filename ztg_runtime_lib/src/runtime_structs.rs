@@ -1,6 +1,8 @@
 use ink::primitives::AccountId;
 use sp_runtime::MultiAddress;
 
+use crate::ztg_primitives::*;
+
 #[derive(scale::Encode, scale::Decode)]
 pub enum RuntimeCall {
     /// This index can be found by investigating runtime configuration. You can check the
@@ -46,9 +48,17 @@ pub enum AssetManagerCall {
     },
 }
 
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/authorized
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum AuthorizedCall {}
+pub enum AuthorizedCall {
+    /// https://github.com/zeitgeistpm/zeitgeist/blob/7ea631dbff5ea519a970c5bc0f3d3d143849d3b9/zrml/authorized/src/lib.rs#L88
+    #[codec(index = 0)]
+    AuthorizeMarketOutcome {
+        market_id: u128,
+        outcome: OutcomeReport
+    },
+}
 
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
