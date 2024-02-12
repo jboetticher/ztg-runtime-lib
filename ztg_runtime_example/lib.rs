@@ -1,7 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[ink::contract]
 mod ztg_runtime_example {
-    use ztg_runtime_lib::primitives::OutcomeReport;
+    use core::ops::Range;
+    use ink::env::Error as EnvError;
+    use sp_runtime::Perbill;
+    use ztg_runtime_lib::primitives::*;
+    use ztg_runtime_lib::runtime_structs::{RuntimeCall, PredictionMarketsCall};
 
     #[ink(storage)]
     pub struct ZtgRuntimeExample {
@@ -11,17 +15,47 @@ mod ztg_runtime_example {
     impl ZtgRuntimeExample {
         #[ink(constructor)]
         pub fn new(_outcome: OutcomeReport) -> Self {
-            ZtgRuntimeExample { outcome_report: _outcome }
+            ZtgRuntimeExample {
+                outcome_report: _outcome,
+            }
         }
 
         #[ink(constructor)]
         pub fn default() -> Self {
             Self::new(OutcomeReport::Scalar(0))
         }
-        
+
         #[ink(message)]
         pub fn set_outcome_to_scalar_five(&mut self) {
             self.outcome_report = OutcomeReport::Scalar(5);
+        }
+
+        /// Returns the current value of the Flipper's boolean.
+        #[ink(message)]
+        pub fn get_outcome(&self) -> OutcomeReport {
+            self.outcome_report.clone()
+        }
+
+        pub fn create_market(&mut self) {
+            self.env()
+                .call_runtime(&RuntimeCall::PredictionMarkets(
+                    PredictionMarketsCall::CreateMarket { 
+                        base_asset: ZeitgeistAsset::Ztg, 
+                        creator_fee: Perbill::zero(), 
+                        oracle: self.env().account_id(), 
+                        period: MarketPeriod::Block(), 
+                        deadlines: Deadlines {
+                            grace_period: 0,
+                            oracle_duration: 0,
+                            dispute_duration: 0
+                        }, 
+                        metadata: MultiHash::Sha3_384(), 
+                        creation: MarketCreation::Permissionless, 
+                        market_type: MarketType::Categorical(2), 
+                        dispute_mechanism: None, 
+                        scoring_rule: ScoringRule::Orderbook
+                    }
+                ))?;
         }
     }
 
@@ -30,7 +64,7 @@ mod ztg_runtime_example {
     /// When running these you need to make sure that you:
     /// - Compile the tests with the `e2e-tests` feature flag enabled (`--features e2e-tests`)
     /// - Are running a Substrate node which contains `pallet-contracts` in the background
-    #[cfg(all(test, std))]
+    #[cfg(all(test))]
     mod e2e_tests {
         /// Imports all the definitions from the outer scope so we can use them here.
         use super::*;
@@ -43,21 +77,27 @@ mod ztg_runtime_example {
         /// We test that we can upload and instantiate the contract using its default constructor.
         #[ink_e2e::test]
         async fn default_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-            // Given
-            let constructor = ZtgRuntimeExampleRef::default();
-
-            // When
+            // Instantiate the smart contract
             let contract_account_id = client
-                .instantiate("ztg_runtime_example", &ink_e2e::alice(), constructor, 0, None)
+                .instantiate(
+                    "ztg_runtime_example",
+                    &ink_e2e::alice(),
+                    ZtgRuntimeExampleRef::default(),
+                    0,
+                    None,
+                )
                 .await
                 .expect("instantiate failed")
                 .account_id;
 
-            // Then
-            let get = build_message::<ZtgRuntimeExampleRef>(contract_account_id.clone())
-                .call(|ztg_runtime_example| ztg_runtime_example.get());
+            // Then check to see that the default outcome was created
+            let get = ink_e2e::build_message::<ZtgRuntimeExampleRef>(contract_account_id.clone())
+                .call(|ztg_runtime_example| ztg_runtime_example.get_outcome());
             let get_result = client.call_dry_run(&ink_e2e::alice(), &get, 0, None).await;
-            assert!(matches!(get_result.return_value(), false));
+            assert!(matches!(
+                get_result.return_value(),
+                OutcomeReport::Scalar(0)
+            ));
 
             Ok(())
         }

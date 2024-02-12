@@ -1,5 +1,5 @@
 use ink::primitives::AccountId;
-use sp_runtime::MultiAddress;
+use sp_runtime::{MultiAddress, Perbill};
 
 use crate::primitives::*;
 
@@ -118,6 +118,28 @@ pub enum PredictionMarketsCall {
         #[codec(compact)]
         amount: u128,
     },
+    #[codec(index = 8)]
+    CreateMarket {
+        base_asset: ZeitgeistAsset, // Asset<u128>,
+        creator_fee: Perbill,
+        oracle: AccountId,
+        period: MarketPeriod,
+        deadlines: Deadlines,
+        metadata: MultiHash,
+        creation: MarketCreation,
+        market_type: MarketType,
+        dispute_mechanism: Option<MarketDisputeMechanism>,
+        scoring_rule: ScoringRule
+    },
+    #[codec(index = 11)]
+    DeploySwapPoolForMarket {
+        #[codec(compact)]
+        market_id: u128,
+        #[codec(compact)]
+        swap_fee: u128,
+        #[codec(compact)]
+        amount: u128,
+    },
     #[codec(index = 12)]
     RedeemShares {
         #[codec(compact)]
@@ -152,16 +174,3 @@ pub enum OrderbookCall {}
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ParimutelCall {}
 
-
-/* ========================== Zeitgeist Data Structures ========================== */
-
-#[derive(scale::Encode, scale::Decode, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum ZeitgeistAsset {
-    CategoricalOutcome(u128, u16),
-    ScalarOutcome, //(u128, ScalarPosition),
-    CombinatorialOutcome,
-    PoolShare, //(SerdeWrapper<PoolId>),
-    Ztg,       // default
-    ForeignAsset(u32),
-}
