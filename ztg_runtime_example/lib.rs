@@ -2,10 +2,9 @@
 #[ink::contract]
 mod ztg_runtime_example {
     use core::ops::Range;
-    use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::*;
-    use ztg_runtime_lib::runtime_structs::{RuntimeCall, PredictionMarketsCall};
+    use ztg_runtime_lib::runtime_structs::{PredictionMarketsCall, RuntimeCall};
 
     #[ink(storage)]
     pub struct ZtgRuntimeExample {
@@ -36,26 +35,28 @@ mod ztg_runtime_example {
             self.outcome_report.clone()
         }
 
-        pub fn create_market(&mut self) {
+        pub fn create_market(&mut self) -> ink::env::Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::PredictionMarkets(
-                    PredictionMarketsCall::CreateMarket { 
-                        base_asset: ZeitgeistAsset::Ztg, 
-                        creator_fee: Perbill::zero(), 
-                        oracle: self.env().account_id(), 
-                        period: MarketPeriod::Block(), 
+                    PredictionMarketsCall::CreateMarket {
+                        base_asset: ZeitgeistAsset::Ztg,
+                        creator_fee: Perbill::zero(),
+                        oracle: self.env().account_id(),
+                        period: MarketPeriod::Block(Range { start: 5, end: 8 }),
                         deadlines: Deadlines {
                             grace_period: 0,
                             oracle_duration: 0,
-                            dispute_duration: 0
-                        }, 
-                        metadata: MultiHash::Sha3_384(), 
-                        creation: MarketCreation::Permissionless, 
-                        market_type: MarketType::Categorical(2), 
-                        dispute_mechanism: None, 
-                        scoring_rule: ScoringRule::Orderbook
-                    }
+                            dispute_duration: 0,
+                        },
+                        metadata: MultiHash::Sha3_384([0; 50]),
+                        creation: MarketCreation::Permissionless,
+                        market_type: MarketType::Categorical(2),
+                        dispute_mechanism: None,
+                        scoring_rule: ScoringRule::Orderbook,
+                    },
                 ))?;
+
+            Ok(())
         }
     }
 

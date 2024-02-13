@@ -52,6 +52,7 @@ pub enum AssetManagerCall {
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum AuthorizedCall {
+    /// Overwrites already provided outcomes for the same market and account.
     /// https://github.com/zeitgeistpm/zeitgeist/blob/7ea631dbff5ea519a970c5bc0f3d3d143849d3b9/zrml/authorized/src/lib.rs#L88
     #[codec(index = 0)]
     AuthorizeMarketOutcome {
