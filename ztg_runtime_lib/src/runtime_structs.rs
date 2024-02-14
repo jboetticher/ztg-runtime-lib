@@ -1,6 +1,11 @@
 use ink::primitives::AccountId;
 use sp_runtime::{MultiAddress, Perbill};
 
+type Balance = u128;
+type Hash = [u8; 32];
+type Timestamp = u64;
+type BlockNumber = u32;
+
 use crate::primitives::*;
 
 #[derive(scale::Encode, scale::Decode)]
@@ -48,6 +53,7 @@ pub enum AssetManagerCall {
     },
 }
 
+/// Calls for authorizing outcomes.  
 /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/authorized
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -61,9 +67,68 @@ pub enum AuthorizedCall {
     },
 }
 
+/// Calls for stake-weighted plurality decision making.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum CourtCall {}
+pub enum CourtCall {
+    /// Join to become a juror, who is able to get randomly selected
+    /// for court cases according to the provided stake.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L531
+    #[codec(index = 0)]
+    JoinCourt {
+        amount: Balance
+    },
+    /// Join the court to become a delegator.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L565
+    #[codec(index = 1)]
+    Delegate {
+        amount: Balance,
+        delegations: Vec<AccountId>
+    },
+    /// Prepare as a court participant (juror or delegator) to exit the court.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L618
+    #[codec(index = 2)]
+    PrepareExitCourt,
+    /// Exit the court.
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L660C16-L660C26
+    #[codec(index = 3)]
+    ExitCourt {
+        court_participant: AccountId // TODO: replace with account ID lookup
+    },
+    /// Vote as a randomly selected juror for a specific court case.
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L717
+    #[codec(index = 4)]
+    Vote {
+        #[codec(compact)] court_id: CourtId,
+        commitment_vote: Hash
+    },
+    #[codec(index = 5)]
+    DenounceVote {
+        #[codec(compact)] court_id: CourtId,
+        juror: AccountId, // AccountIdLookupOf<T>
+        vote_item: VoteItem,
+        salt: Hash
+    },
+    #[codec(index = 6)]
+    RevealVote {
+        #[codec(compact)] court_id: CourtId,
+        vote_item: VoteItem,
+        salt: Hash,
+    },
+    #[codec(index = 7)]
+    Appeal {
+        #[codec(compact)] court_id: CourtId
+    },
+    #[codec(index = 8)]
+    ReassignCourtStakes {
+        #[codec(compact)] court_id: CourtId
+    },
+    #[codec(index = 9)]
+    SetInflation {
+        inflation: Perbill
+    },
+}
 
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]

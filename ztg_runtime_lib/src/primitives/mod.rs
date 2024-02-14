@@ -3,16 +3,29 @@ use core::ops::{Range, RangeInclusive};
 #[cfg(feature = "std")]
 use ink::storage::traits::StorageLayout;
 
-/* ========================== Zeitgeist Types ========================== */
+// region: ZEITGEIST AUTHORITY
+
 pub type CategoryIndex = u16;
 
-/* ========================== Zeitgeist Primitives ========================== */
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum OutcomeReport {
     Categorical(CategoryIndex),
     Scalar(u128),
 }
+
+// endregion
+
+pub type CourtId = u128;
+
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
+pub enum VoteItem {
+    Outcome(OutcomeReport),
+    Binary(bool),
+}
+
+// region: ZEITGEIST MARKET
 
 // TODO: implement storage layout for "Range"
 /// Defines whether the period is represented as a blocknumber or a timestamp.
@@ -102,3 +115,5 @@ pub enum ZeitgeistAsset {
     Ztg,       // default
     ForeignAsset(u32),
 }
+
+// endregion
