@@ -447,6 +447,8 @@ pub enum StyxCall {
     }
 }
 
+/// Calls for setting one out of multiple outcomes with the most locked native tokens as the canonical outcome.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum GlobalDisputesCall {
@@ -497,14 +499,136 @@ pub enum GlobalDisputesCall {
     }
 }
 
+// TODO: ensure that the ZeitgeistAsset is the same as AssetOf = Asset<MarketIdOf<T>>,
+/// Calls for interacting with LMSR liquidity pools.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum NeoSwapsCall {}
+pub enum NeoSwapsCall {
+    /// Buy outcome tokens from the specified market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L316
+    #[codec(index = 0)]
+    Buy {
+        #[codec(compact)]
+        market_id: MarketId,
+        asset_count: AssetIndexType,
+        asset_out: ZeitgeistAsset,
+        #[codec(compact)]
+        amount_in: Balance,
+        #[codec(compact)]
+        min_amount_out: Balance,
+    },
+    /// Sell outcome tokens to the specified market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L316
+    #[codec(index = 1)]
+    Sell {
+        #[codec(compact)]
+        market_id: MarketId,
+        asset_count: AssetIndexType,
+        asset_in: ZeitgeistAsset,
+        #[codec(compact)]
+        amount_in: Balance,
+        #[codec(compact)]
+        min_amount_out: Balance,
+    },
+    /// Join the liquidity pool for the specified market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L403
+    #[codec(index = 2)]
+    Join {
+        #[codec(compact)]
+        market_id: MarketId,
+        #[codec(compact)]
+        pool_shares_amount: Balance,
+        max_amounts_in: ink::prelude::vec::Vec<Balance>,
+    },
+    /// Exit the liquidity pool for the specified market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L450
+    #[codec(index = 3)]
+    Exit {
+        #[codec(compact)]
+        market_id: MarketId,
+        #[codec(compact)]
+        pool_shares_amount_out: Balance,
+        min_amounts_out: ink::prelude::vec::Vec<Balance>,
+    },
+    /// Withdraw swap fees from the specified market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L450
+    #[codec(index = 4)]
+    WithdrawFees {
+        #[codec(compact)]
+        market_id: MarketId
+    },
+    /// Deploy a pool for the specified market and provide liquidity.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L514
+    #[codec(index = 5)]
+    DeployPool {
+        #[codec(compact)]
+        market_id: MarketId,
+        #[codec(compact)]
+        amount: Balance,
+        spot_prices: ink::prelude::vec::Vec<Balance>,
+        #[codec(compact)]
+        swap_fee: Balance,
+    },
+}
 
+/// Calls for interacting with an on-chain order book, which allows to exchange the market's 
+/// base asset for outcome assets and vice versa.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum OrderbookCall {}
+pub enum OrderbookCall {
+    /// Removes an order.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L183
+    #[codec(index = 0)]
+    RemoveOrder {
+        order_id: OrderId,
+    },
+    /// Fills an existing order entirely or partially.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L205
+    #[codec(index = 1)]
+    FillOrder {
+        order_id: OrderId,
+        maker_partial_fill: Option<Balance>
+    },
+    /// Place a new order.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L225
+    #[codec(index = 2)]
+    PlaceOrder {
+        #[codec(compact)]
+        market_id: MarketId,
+        maker_asset: ZeitgeistAsset,
+        #[codec(compact)]
+        maker_amount: Balance,
+        taker_asset: ZeitgeistAsset,
+        #[codec(compact)]
+        taker_amount: Balance,
+    },
+}
 
+/// Calls for interacting with a parimutuel market maker for categorical markets.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/parimutuel
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum ParimutelCall {}
+pub enum ParimutelCall {
+    /// Buy parimutuel shares for the market's base asset.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L203
+    #[codec(index = 0)]
+    Buy {
+        asset: ZeitgeistAsset, // TODO: ensure that this is the same as Asset<MarketIdOf<T>>,
+        #[codec(compact)]
+        amount: Balance,
+    },
+    /// Claim winnings from a resolved market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L221
+    #[codec(index = 1)]
+    ClaimRewards {
+        market_id: MarketId
+    },
+    /// Refund the base asset of losing categorical outcome assets.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L240
+    #[codec(index = 2)]
+    ClaimRefunds {
+        refund_asset: MarketId
+    },
+}

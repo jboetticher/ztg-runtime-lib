@@ -5,6 +5,7 @@ use ink::storage::traits::StorageLayout;
 
 pub type PoolId = u128;
 pub type MarketId = u128;
+pub type OrderId = u128;
 
 // region: ZEITGEIST AUTHORITY
 
@@ -124,3 +125,5 @@ pub enum ZeitgeistAsset {
 }
 
 // endregion
+
+pub type AssetIndexType = u16;
