@@ -6,8 +6,6 @@ pub type Hash = [u8; 32];
 pub type Timestamp = u64;
 pub type BlockNumber = u32;
 
-pub type PoolId = u128;
-
 use crate::primitives::*;
 
 #[derive(scale::Encode, scale::Decode)]
@@ -65,8 +63,8 @@ pub enum AuthorizedCall {
     /// https://github.com/zeitgeistpm/zeitgeist/blob/7ea631dbff5ea519a970c5bc0f3d3d143849d3b9/zrml/authorized/src/lib.rs#L88
     #[codec(index = 0)]
     AuthorizeMarketOutcome {
-        market_id: u128,
-        outcome: OutcomeReport
+        market_id: MarketId,
+        outcome: OutcomeReport,
     },
 }
 
@@ -79,15 +77,13 @@ pub enum CourtCall {
     /// for court cases according to the provided stake.  
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L531
     #[codec(index = 0)]
-    JoinCourt {
-        amount: Balance
-    },
+    JoinCourt { amount: Balance },
     /// Join the court to become a delegator.  
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L565
     #[codec(index = 1)]
     Delegate {
         amount: Balance,
-        delegations: Vec<AccountId>
+        delegations: ink::prelude::vec::Vec<AccountId>,
     },
     /// Prepare as a court participant (juror or delegator) to exit the court.  
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L618
@@ -97,29 +93,32 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L660C16-L660C26
     #[codec(index = 3)]
     ExitCourt {
-        court_participant: AccountId // TODO: replace with account ID lookup
+        court_participant: AccountId, // TODO: replace with account ID lookup
     },
     /// Vote as a randomly selected juror for a specific court case.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L717
     #[codec(index = 4)]
     Vote {
-        #[codec(compact)] court_id: CourtId,
-        commitment_vote: Hash
+        #[codec(compact)]
+        court_id: CourtId,
+        commitment_vote: Hash,
     },
     /// Denounce a juror during the voting period for which the commitment vote is known.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L784
     #[codec(index = 5)]
     DenounceVote {
-        #[codec(compact)] court_id: CourtId,
+        #[codec(compact)]
+        court_id: CourtId,
         juror: AccountId, // AccountIdLookupOf<T>
         vote_item: VoteItem,
-        salt: Hash
+        salt: Hash,
     },
     /// Reveal the commitment vote of the caller, who is a selected juror.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L868
     #[codec(index = 6)]
     RevealVote {
-        #[codec(compact)] court_id: CourtId,
+        #[codec(compact)]
+        court_id: CourtId,
         vote_item: VoteItem,
         salt: Hash,
     },
@@ -127,22 +126,24 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L957
     #[codec(index = 7)]
     Appeal {
-        #[codec(compact)] court_id: CourtId
+        #[codec(compact)]
+        court_id: CourtId,
     },
     /// Reassign the stakes of the jurors and delegators
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1046
     #[codec(index = 8)]
     ReassignCourtStakes {
-        #[codec(compact)] court_id: CourtId
+        #[codec(compact)]
+        court_id: CourtId,
     },
     /// Set the yearly inflation rate of the court system.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1167
     #[codec(index = 9)]
-    SetInflation {
-        inflation: Perbill
-    },
+    SetInflation { inflation: Perbill },
 }
 
+/// Calls for swapping shares out for different ones.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/swaps
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum SwapsCall {
@@ -166,7 +167,7 @@ pub enum SwapsCall {
         #[codec(compact)]
         asset_amount: Balance,
         #[codec(compact)]
-        max_pool_amount: Balance
+        max_pool_amount: Balance,
     },
     /// Exits a pool with an exact pool amount.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/swaps/src/lib.rs#L193
@@ -212,7 +213,7 @@ pub enum SwapsCall {
         #[codec(compact)]
         pool_amount: Balance,
         #[codec(compact)]
-        max_asset_amount: Balance
+        max_asset_amount: Balance,
     },
     // https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fbsr.zeitgeist.pm#/extrinsics/decode/0x380981040402286bee00b102000000000000000000000000000001000100cdbe7b00000000000000000000000000
     /// Swaps an exact amount in.
@@ -254,16 +255,57 @@ pub enum SwapsCall {
     },
 }
 
+/// Calls for creating, reporting, and disputing prediction markets.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum PredictionMarketsCall {
+    /// Allows the `CloseOrigin` to immediately move an open market to closed.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L345
+    #[codec(index = 1)]
+    AdminMoveMarketToClosed {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Allows the `CloseOrigin` to immediately move an open market to closed.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L378
+    #[codec(index = 2)]
+    AdminMoveMarketToResolved {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Approves a market that is waiting for approval from the advisory committee.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L429
+    #[codec(index = 3)]
+    ApproveMarket {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Request an edit to a proposed market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L471
+    RequestEdit {
+        #[codec(compact)]
+        market_id: MarketId,
+        edit_reason: ink::prelude::vec::Vec<u8>,
+    },
+    /// Buy a complete set of outcome shares of a market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L515
     #[codec(index = 5)]
     BuyCompleteSet {
         #[codec(compact)]
-        market_id: u128,
+        market_id: MarketId,
         #[codec(compact)]
         amount: Balance,
     },
+    /// Dispute on a market that has been reported or already disputed.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L542
+    #[codec(index = 6)]
+    Dispute {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Creates a market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L594
     #[codec(index = 8)]
     CreateMarket {
         base_asset: ZeitgeistAsset, // Asset<u128>,
@@ -275,28 +317,114 @@ pub enum PredictionMarketsCall {
         creation: MarketCreation,
         market_type: MarketType,
         dispute_mechanism: Option<MarketDisputeMechanism>,
-        scoring_rule: ScoringRule
+        scoring_rule: ScoringRule,
     },
-    #[codec(index = 11)]
-    DeploySwapPoolForMarket {
-        #[codec(compact)]
-        market_id: u128,
-        #[codec(compact)]
-        swap_fee: Balance,
-        #[codec(compact)]
-        amount: Balance,
+    /// Edit a proposed market for which request is made.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L646
+    #[codec(index = 9)]
+    EditMarket {
+        base_asset: ZeitgeistAsset,
+        market_id: MarketId,
+        oracle: AccountId,
+        period: MarketPeriod,
+        deadlines: Deadlines,
+        metadata: MultiHash,
+        market_type: MarketType,
+        dispute_mechanism: Option<MarketDisputeMechanism>,
+        scoring_rule: ScoringRule,
     },
+    /// Redeems the winning shares of a prediction market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L707
     #[codec(index = 12)]
     RedeemShares {
         #[codec(compact)]
-        market_id: u128,
+        market_id: MarketId,
     },
+    /// Rejects a market that is waiting for approval from the advisory committee.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L856
+    #[codec(index = 13)]
+    RejectMarket {
+        #[codec(compact)]
+        market_id: MarketId,
+        reject_reason: ink::prelude::vec::Vec<u8>,
+    },
+    /// Reports the outcome of a market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L886
+    #[codec(index = 14)]
+    Report {
+        #[codec(compact)]
+        market_id: MarketId,
+        outcome: OutcomeReport,
+    },
+    /// Sells a complete set of outcomes shares for a market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L928
     #[codec(index = 15)]
     SellCompleteSet {
         #[codec(compact)]
-        market_id: u128,
+        market_id: MarketId,
         #[codec(compact)]
         amount: Balance,
+    },
+    /// Start a global dispute, if the market dispute mechanism fails.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L928
+    #[codec(index = 16)]
+    StartGlobalDispute {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Create a market, deploy a LMSR pool, and buy outcome tokens and provide liquidity to the
+    /// market.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1059
+    #[codec(index = 17)]
+    CreateMarketAndDeployPool {
+        base_asset: ZeitgeistAsset,
+        creator_fee: Perbill,
+        oracle: AccountId,
+        period: MarketPeriod,
+        deadlines: Deadlines,
+        metadata: MultiHash,
+        market_type: MarketType,
+        dispute_mechanism: Option<MarketDisputeMechanism>,
+        #[codec(compact)]
+        amount: Balance,
+        spot_prices: ink::prelude::vec::Vec<Balance>,
+        #[codec(compact)]
+        swap_fee: Balance,
+    },
+    /// Allows the `CloseMarketsEarlyOrigin` or the market creator to schedule an early close.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1122
+    #[codec(index = 18)]
+    ScheduleEarlyClose {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Allows anyone to dispute a scheduled early close.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1270
+    #[codec(index = 19)]
+    DisputeEarlyClose {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Allows the `CloseMarketsEarlyOrigin` to reject a scheduled early close.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1356
+    #[codec(index = 20)]
+    RejectEarlyClose {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Allows the market creator of a trusted market to immediately move an open market to closed.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1437
+    #[codec(index = 21)]
+    CloseTrustedMarket {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Allows the manual closing for "broken" markets.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/prediction-markets/src/lib.rs#L1464
+    #[codec(index = 22)]
+    ManuallyCloseMarket {
+        #[codec(compact)]
+        market_id: MarketId,
     },
 }
 
@@ -319,4 +447,3 @@ pub enum OrderbookCall {}
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ParimutelCall {}
-

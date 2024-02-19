@@ -3,6 +3,9 @@ use core::ops::{Range, RangeInclusive};
 #[cfg(feature = "std")]
 use ink::storage::traits::StorageLayout;
 
+pub type PoolId = u128;
+pub type MarketId = u128;
+
 // region: ZEITGEIST AUTHORITY
 
 pub type CategoryIndex = u16;
@@ -16,6 +19,8 @@ pub enum OutcomeReport {
 
 // endregion
 
+// region: ZEITGEIST COURT
+
 pub type CourtId = u128;
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
@@ -24,6 +29,8 @@ pub enum VoteItem {
     Outcome(OutcomeReport),
     Binary(bool),
 }
+
+// endregion
 
 // region: ZEITGEIST MARKET
 
