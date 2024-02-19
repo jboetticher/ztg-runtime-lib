@@ -428,13 +428,74 @@ pub enum PredictionMarketsCall {
     },
 }
 
+/// Calls for burning native chain tokens in order to gain entry into a registry
+/// for off-chain use.  
+/// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/styx
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum StyxCall {}
+pub enum StyxCall {
+    /// Burns ZTG to cross, granting the ability to claim your zeitgeist avatar. The signer can only cross once.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/styx/src/lib.rs#L90
+    #[codec(index = 0)]
+    Cross,
+    /// Sets the burn amount to cross.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/styx/src/lib.rs#L126
+    #[codec(index = 1)]
+    SetBurnAmount {
+        #[codec(compact)]
+        market_id: Balance,
+    }
+}
 
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub enum GlobalDisputesCall {}
+pub enum GlobalDisputesCall {
+    /// Add voting outcome to a global dispute in exchange for a constant fee.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L276
+    #[codec(index = 0)]
+    AddVoteOutcome {
+        #[codec(compact)]
+        market_id: MarketId,
+        outcome: OutcomeReport,
+    },
+    /// Return the voting outcome fees in case the global dispute was destroyed.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L339
+    #[codec(index = 5)]
+    RefundVoteFees {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Purge all outcomes to allow the winning outcome owner(s) to get their reward.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L398
+    #[codec(index = 1)]
+    PurgeOutcomes {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Reward the collected fees to the owner(s) of a voting outcome.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L456
+    #[codec(index = 2)]
+    RewardOutcomeOwner {
+        #[codec(compact)]
+        market_id: MarketId,
+    },
+    /// Vote on existing voting outcomes by locking native tokens.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L510
+    #[codec(index = 3)]
+    VoteOnOutcome {
+        #[codec(compact)]
+        market_id: MarketId,
+        outcome: OutcomeReport,
+        #[codec(compact)]
+        amount: Balance
+    },
+    /// Return all locked native tokens from a finished or destroyed global dispute.  
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L611
+    #[codec(index = 4)]
+    UnlockVoteBalance {
+        voter: AccountId // TODO: see if its the same as AccountIdLookupOf<T>,
+    }
+}
 
 #[derive(scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
