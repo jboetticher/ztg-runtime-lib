@@ -11,6 +11,7 @@ frame-system = { workspace = true }
 parity-scale-codec = { workspace = true }
 sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
+zrml-styx = { workspace = true }
 
 [features]
 default = ["std"]

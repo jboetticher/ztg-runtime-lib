@@ -2839,6 +2839,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime 7.0.0",
  "zeitgeist-primitives",
+ "zrml-styx",
 ]
 
 [[package]]
@@ -7799,6 +7800,18 @@ dependencies = [
  "byteorder",
  "crc32fast",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "zrml-styx"
+version = "0.4.3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime 7.0.0",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
