@@ -1,0 +1,3 @@
+[submodule "zeitgeist"]
+	path = zeitgeist
+	url = https://github.com/sea212/zeitgeist.git
