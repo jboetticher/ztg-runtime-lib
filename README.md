@@ -11,3 +11,9 @@ Specify a Zeitgeist node:
 ```
 export CONTRACTS_NODE=/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist
 ```
+
+Run node:
+
+```
+/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json
+```
