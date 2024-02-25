@@ -17,3 +17,8 @@ Run node:
 ```
 /Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json
 ```
+
+## Polkadot JS Contracts
+
+How to query with WeightsV2:
+https://substrate.stackexchange.com/a/7275/4422

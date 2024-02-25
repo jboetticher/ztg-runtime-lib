@@ -1,12 +1,13 @@
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
-import { CodePromise } from '@polkadot/api-contract';
+import { CodePromise, ContractPromise } from '@polkadot/api-contract';
 import { WeightV2 } from '@polkadot/types/interfaces/runtime/types';
+import { BN, BN_ONE } from '@polkadot/util';
 import { spawn } from 'child_process';
 import fs from "fs";
 
 // Ensure WASM crypto is initialized
-cryptoWaitReady().then(() => {
+cryptoWaitReady().then(async () => {
   /*
   
   In the local environment used to test this, "//Charlie" has been given the SUDO.
@@ -21,16 +22,18 @@ cryptoWaitReady().then(() => {
   const KEYRING = new Keyring({ type: 'sr25519' });
   const SUDO = KEYRING.addFromUri('//Charlie');
   const PATH_TO_NODE = '/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist'; // TODO: turn into environment variable
-  const PATH_TO_CUSTOM_SPEC = '/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json';
+  const PATH_TO_CUSTOM_SPEC = '/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json'; // TODO: turn into environment variable
   const ZEITGEIST_WS_ENDPOINT = 'ws://127.0.0.1:9944';
 
-  async function setSudoKey() {
+  // Some constants
+  const MAX_CALL_WEIGHT = new BN(5_000_000_000_000).isub(BN_ONE);
+  const PROOFSIZE = new BN(1_000_000);
+
+
+  async function setSudoKey(newSudoAccount: string) {
     // Connect to the local Zeitgeist node
     const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
     const api = await ApiPromise.create({ provider });
-
-    // Address of the new sudo account
-    const newSudoAccount = '5GpXuV3kd62JEVSKKXzy3FfA2Xp3wBiJCUiyJnrBHvWX9DzA';
 
     // Create and sign the transaction
     const tx = api.tx.sudo.sudo(
@@ -60,6 +63,10 @@ cryptoWaitReady().then(() => {
     return nodeProcess;
   };
 
+  /**
+   * Deploys the ztg_runtime_example smart contract.
+   * @returns A contract instance
+   */
   async function deployTestContract() {
     // Connect to the local Zeitgeist node
     const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
@@ -77,24 +84,57 @@ cryptoWaitReady().then(() => {
       refTime: api.createType('Compact<u64>', 100000n * 1000000n),
       proofSize: api.createType('Compact<u64>', 50000n)
     });
-    await code.tx.new(
-      { storageDepositLimit: null, gasLimit: w2 },
-      0 /* Constructor index [there is only 1, so 0]*/,
-      /* Constructor arguments [there should be none] */
-    )
-      .signAndSend(SUDO, (result) => {
-        console.log(`Deployment status is ${result.status}`);
 
-        if (result.status.isInBlock) {
-          console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
-        } else if (result.status.isFinalized) {
-          console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
-          process.exit(0);
-        }
-      });
+    // const address: string = await new Promise((resolve, reject) => {
+    //   code.tx.new(
+    //     { storageDepositLimit: null, gasLimit: w2 },
+    //     0 /* Constructor index [there is only 1, so 0]*/,
+    //     /* Constructor arguments [there should be none] */
+    //   )
+    //     .signAndSend(SUDO, (result) => {
+    //       if (result.status.isFinalized) {
+    //         // Loop through events to find the contract address
+    //         result.events.forEach(({ event: { data, method, section } }) => {
+    //           if (section === 'contracts' && method === 'Instantiated') {
+    //             const [creator, contractAddress] = data;
+    //             // console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
+    //             console.log(`Contract successfully deployed at address: ${contractAddress}`);
+    //             resolve(contractAddress.toString());
+    //           }
+    //         });
+    //       }
+
+    //       if (result.isError) {
+    //         reject("Error occured on deployment");
+    //       }
+
+    //       if (result.status.isInBlock) {
+    //         console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
+    //       }
+    //     });
+    // });
+
+    return new ContractPromise(api, metadata, 'dE21rXZeqGrotMWzgnS1TSn8vUKJ6qggPQ9SdqgJEBq6RNSVu');
   }
 
-  deployTestContract();
+  const contract = await deployTestContract();
+  console.log('contract addr:', contract.address.toHuman())
+  const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
+  const api = await ApiPromise.create({ provider });
+  const { gasConsumed, result, output } = await contract.query.getOutcome(
+    SUDO.address,
+    {
+      gasLimit: api?.registry.createType('WeightV2', {
+        refTime: MAX_CALL_WEIGHT,
+        proofSize: PROOFSIZE,
+      }) as WeightV2,
+      storageDepositLimit: null
+    }
+  );
+  console.log('Result:', result.toHuman());
+  console.log('Output:', output?.toHuman())
+
+  process.exit(0);
 });
 
 
