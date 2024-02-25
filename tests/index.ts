@@ -85,54 +85,90 @@ cryptoWaitReady().then(async () => {
       proofSize: api.createType('Compact<u64>', 50000n)
     });
 
-    // const address: string = await new Promise((resolve, reject) => {
-    //   code.tx.new(
-    //     { storageDepositLimit: null, gasLimit: w2 },
-    //     0 /* Constructor index [there is only 1, so 0]*/,
-    //     /* Constructor arguments [there should be none] */
-    //   )
-    //     .signAndSend(SUDO, (result) => {
-    //       if (result.status.isFinalized) {
-    //         // Loop through events to find the contract address
-    //         result.events.forEach(({ event: { data, method, section } }) => {
-    //           if (section === 'contracts' && method === 'Instantiated') {
-    //             const [creator, contractAddress] = data;
-    //             // console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
-    //             console.log(`Contract successfully deployed at address: ${contractAddress}`);
-    //             resolve(contractAddress.toString());
-    //           }
-    //         });
-    //       }
+    const address: string = await new Promise((resolve, reject) => {
+      code.tx.new(
+        { storageDepositLimit: null, gasLimit: w2 },
+        0 /* Constructor index [there is only 1, so 0]*/,
+        /* Constructor arguments [there should be none] */
+      )
+        .signAndSend(SUDO, (result) => {
+          if (result.status.isFinalized) {
+            // Loop through events to find the contract address
+            result.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'contracts' && method === 'Instantiated') {
+                const [creator, contractAddress] = data;
+                // console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
+                console.log(`Contract successfully deployed at address: ${contractAddress}`);
+                resolve(contractAddress.toString());
+              }
+            });
+          }
 
-    //       if (result.isError) {
-    //         reject("Error occured on deployment");
-    //       }
+          if (result.isError) {
+            reject("Error occured on deployment");
+          }
 
-    //       if (result.status.isInBlock) {
-    //         console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
-    //       }
-    //     });
-    // });
+          if (result.status.isInBlock) {
+            console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
+          }
+        });
+    });
 
-    return new ContractPromise(api, metadata, 'dE21rXZeqGrotMWzgnS1TSn8vUKJ6qggPQ9SdqgJEBq6RNSVu');
+    return new ContractPromise(api, metadata, address);
   }
 
   const contract = await deployTestContract();
-  console.log('contract addr:', contract.address.toHuman())
   const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
   const api = await ApiPromise.create({ provider });
-  const { gasConsumed, result, output } = await contract.query.getOutcome(
+
+  // Creates the max gas limit
+  const maxGasLimit = api?.registry.createType('WeightV2', {
+    refTime: MAX_CALL_WEIGHT,
+    proofSize: PROOFSIZE,
+  }) as WeightV2;
+
+  // Query for initial value
+  let { result, output } = await contract.query.getOutcome(
     SUDO.address,
     {
-      gasLimit: api?.registry.createType('WeightV2', {
-        refTime: MAX_CALL_WEIGHT,
-        proofSize: PROOFSIZE,
-      }) as WeightV2,
+      gasLimit: maxGasLimit,
       storageDepositLimit: null
     }
   );
   console.log('Result:', result.toHuman());
-  console.log('Output:', output?.toHuman())
+  console.log('Output:', output?.toHuman());
+
+  // Set value
+  const { gasRequired } = await contract.query.setOutcomeToScalarFive(
+    SUDO.address,
+    { gasLimit: maxGasLimit, storageDepositLimit: null }
+  );
+  await new Promise(async (resolve, _) => {
+    await contract.tx
+      .setOutcomeToScalarFive({
+        gasLimit: api?.registry.createType('WeightV2', gasRequired) as WeightV2,
+        storageDepositLimit: null
+      })
+      .signAndSend(SUDO, async (res) => {
+        if (res.status.isInBlock) {
+          console.log('set_outcome_to_scalar_five in a block')
+        } else if (res.status.isFinalized) {
+          console.log('set_outcome_to_scalar_five finalized')
+          resolve(null);
+        }
+      });
+  });
+
+  // Query value again
+  let { result: result2, output: output2 } = await contract.query.getOutcome(
+    SUDO.address,
+    {
+      gasLimit: maxGasLimit,
+      storageDepositLimit: null
+    }
+  );
+  console.log('Result:', result2.toHuman());
+  console.log('Output:', output2?.toHuman());
 
   process.exit(0);
 });
