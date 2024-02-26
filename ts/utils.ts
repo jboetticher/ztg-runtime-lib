@@ -57,11 +57,7 @@ export async function getAPI() {
  * Deploys the ztg_runtime_example smart contract.
  * @returns A contract instance
  */
-export async function deployTestContract() {
-  // Connect to the local Zeitgeist node
-  const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
-  const api = await ApiPromise.create({ provider });
-
+export async function deployTestContract(api: ApiPromise) {
   // Load contract WASM and metadata
   const wasm = fs.readFileSync(EXAMPLE_CONTRACT_WASM);
   const metadata = fs.readFileSync(EXAMPLE_CONTRACT_META, { encoding: 'utf-8' });
@@ -82,7 +78,8 @@ export async function deployTestContract() {
       /* Constructor arguments [there should be none] */
     )
       .signAndSend(sudo(), (result) => {
-        if (result.status.isFinalized) {
+        if (result.isError) reject("Error occured on deployment");
+        else if (result.status.isInBlock) {
           // Loop through events to find the contract address
           result.events.forEach(({ event: { data, method, section } }) => {
             if (section === 'contracts' && method === 'Instantiated') {
@@ -92,14 +89,6 @@ export async function deployTestContract() {
               resolve(contractAddress.toString());
             }
           });
-        }
-
-        if (result.isError) {
-          reject("Error occured on deployment");
-        }
-
-        if (result.status.isInBlock) {
-          console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
         }
       });
   });

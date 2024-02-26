@@ -1,5 +1,6 @@
 import { expect } from 'chai';
-import { createGas, deployTestContract, getAPI, maxWeight2, sudo } from '../utils.js';
+import { createGas, deployTestContract, getAPI, maxWeight2, startNode, sudo } from '../utils.js';
+import { ChildProcessWithoutNullStreams } from 'child_process';
 import { ApiPromise } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
@@ -7,29 +8,28 @@ import { cryptoWaitReady } from '@polkadot/util-crypto';
 describe('Styx Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
+  let process: ChildProcessWithoutNullStreams;
 
-  before(async function () {
+  this.beforeAll(async function () {
+    process = startNode();
     await cryptoWaitReady();
-    // TODO: create instance of node
     ({ api } = await getAPI());
-    contract = await deployTestContract();
+    contract = await deployTestContract(api);
   });
 
-  after(async function () {
+  this.afterAll(async function () {
     await api.disconnect();
-    // TODO: destroy node
+    process.kill('SIGTERM');
   });
 
-  it('should have a correct initial state', async function () {
-    // Query for initial value
-    let { result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api));
-    expect(output?.toJSON()).to.not.be.null;
-  });
+  
 
+  // A sample test to show how to interact with the smart contract
   it('should change state correctly', async function () {
     // Query for initial value
     let { result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api));
-    expect(output?.toJSON()).to.not.be.null;
+    let outcome = output?.toJSON() as { ok: { categorical?: number, scalar?: number } };
+    expect(outcome.ok.categorical).to.equal(0);
 
     // Set value
     const { gasRequired } = await contract.query.setOutcomeToScalarFive(sudo().address, maxWeight2(api));
@@ -39,8 +39,6 @@ describe('Styx Runtime Calls', function () {
         .signAndSend(sudo(), async (res) => {
           if (res.status.isInBlock) {
             console.log('set_outcome_to_scalar_five in a block')
-          } else if (res.status.isFinalized) {
-            console.log('set_outcome_to_scalar_five finalized')
             resolve(null);
           }
         });
@@ -48,6 +46,7 @@ describe('Styx Runtime Calls', function () {
 
     // Query value again
     ({ result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api)));
-    expect(output?.toJSON()).to.not.be.null;
+    outcome = output?.toJSON() as { ok: { categorical?: number, scalar?: number } };
+    expect(outcome.ok.scalar).to.equal(5);
   });
 });

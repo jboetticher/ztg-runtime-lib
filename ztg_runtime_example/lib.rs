@@ -4,7 +4,23 @@ mod ztg_runtime_example {
     use core::ops::Range;
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::*;
-    use ztg_runtime_lib::runtime_structs::{PredictionMarketsCall, RuntimeCall};
+    use ztg_runtime_lib::runtime_structs::{PredictionMarketsCall, RuntimeCall, StyxCall};
+    use ink::env::Error as EnvError;
+
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum Error { CallRuntimeFailed }
+
+    impl From<EnvError> for Error {
+        fn from(e: EnvError) -> Self {
+            match e {
+                EnvError::CallRuntimeFailed => Error::CallRuntimeFailed,
+                _ => panic!("Unexpected error from `pallet-contracts`."),
+            }
+        }
+    }
+
+    pub type Result<T> = core::result::Result<T, Error>;
 
     #[ink(storage)]
     pub struct ZtgRuntimeExample {
@@ -23,6 +39,30 @@ mod ztg_runtime_example {
         pub fn default() -> Self {
             Self::new(OutcomeReport::Scalar(0))
         }
+
+        // region: Styx
+
+        #[ink(message)]
+        pub fn set_burn_amount(&mut self, amount: Balance) -> Result<()> {
+            self.env().call_runtime(
+                &RuntimeCall::Styx(
+                    StyxCall::SetBurnAmount {
+                        amount
+                    }
+                )
+            ).map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn cross(&mut self) -> Result<()> {
+            self.env().call_runtime(
+                &RuntimeCall::Styx(
+                    StyxCall::Cross
+                )
+            ).map_err(Into::<Error>::into)
+        }
+
+        // endregion
 
         #[ink(message)]
         pub fn set_outcome_to_scalar_five(&mut self) {

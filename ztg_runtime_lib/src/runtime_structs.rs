@@ -443,7 +443,7 @@ pub enum StyxCall {
     #[codec(index = 1)]
     SetBurnAmount {
         #[codec(compact)]
-        market_id: Balance,
+        amount: Balance,
     }
 }
 
