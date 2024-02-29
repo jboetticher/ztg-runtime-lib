@@ -22,3 +22,6 @@ Run node:
 
 How to query with WeightsV2:
 https://substrate.stackexchange.com/a/7275/4422
+
+## Polkadot JS Contracts
+https://github.com/paritytech/substrate/blob/033d4e86cc7eff0066cd376b9375f815761d653c/frame/contracts/src/lib.rs#L963
