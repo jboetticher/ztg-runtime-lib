@@ -5,7 +5,7 @@ mod ztg_runtime_example {
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::*;
-    use ztg_runtime_lib::runtime_structs::{PredictionMarketsCall, RuntimeCall, StyxCall};
+    use ztg_runtime_lib::runtime_structs::{AssetManagerCall, PredictionMarketsCall, RuntimeCall, StyxCall};
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -41,6 +41,21 @@ mod ztg_runtime_example {
         pub fn default() -> Self {
             Self::new(OutcomeReport::Scalar(0))
         }
+
+        // region: Asset Manager
+        
+        #[ink(message)]
+        pub fn transfer(&mut self, dest: AccountId, amount: Balance) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::AssetManager(AssetManagerCall::Transfer { 
+                    dest: dest.into(), 
+                    currency_id: ZeitgeistAsset::Ztg, 
+                    amount
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
 
         // region: Styx
 

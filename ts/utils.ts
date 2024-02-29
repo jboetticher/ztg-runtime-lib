@@ -1,5 +1,5 @@
 import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
-import { cryptoWaitReady } from '@polkadot/util-crypto';
+import { cryptoWaitReady, randomAsHex } from '@polkadot/util-crypto';
 import { CodePromise, ContractPromise } from '@polkadot/api-contract';
 import { WeightV2, Weight } from '@polkadot/types/interfaces/runtime/types';
 import { BN, BN_ONE } from '@polkadot/util';
@@ -140,4 +140,38 @@ export function createGas(api: ApiPromise, gasRequired: Weight) {
     gasLimit: api.registry.createType('WeightV2', gasRequired) as WeightV2,
     storageDepositLimit: null
   }
+}
+/**
+ * Waits a specified number of blocks before resolving
+ * @param api The Polkadot API
+ * @param blocks Number of blocks to wait
+ */
+export async function waitBlocks(api: ApiPromise, blocks: number): Promise<void> {
+  let blocksSeen: number = 0;
+
+  return await new Promise<void>(async (resolve, reject) => {
+    // Subscribe to new block headers
+    const unsubscribe = await api.rpc.chain.subscribeNewHeads((header) => {
+      blocksSeen += 1;
+
+      if (blocksSeen >= blocks) {
+        // Unsubscribe from the block header subscription
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+}
+
+/**Generates a random PolkadotJS address */
+export function generateRandomAddress() {
+    // Create a keyring instance. The keyring is used to generate and manage keys.
+    // Specify the type of address you want to generate, e.g., 'sr25519' (Substrate) or 'ed25519'
+    const keyring = new Keyring({ type: 'sr25519' });
+  
+    // Generate a random keypair
+    const pair = keyring.addFromUri(randomAsHex(32));
+  
+    // Get the address from the keypair
+    return pair.address;
 }
