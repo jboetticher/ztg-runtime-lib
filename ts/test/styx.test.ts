@@ -1,17 +1,17 @@
 import { expect } from 'chai';
-import { createGas, deployTestContract, getAPI, maxWeight2, setSudoKey, startNode, sudo } from '../utils.js';
+import { createGas, deployTestContract, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-describe.skip('zrml-styx Runtime Calls', function () {
+describe('zrml-styx Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
   let process: ChildProcessWithoutNullStreams;
 
   this.beforeAll(async function () {
-    process = startNode();
+    // process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -19,19 +19,18 @@ describe.skip('zrml-styx Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    process.kill('SIGTERM');
+    // process.kill('SIGTERM');
   });
 
-  it('Should cross', async function() {
+  it.only('Should cross', async function() {
     let foundCrossEvent = false;
     const SUDO = sudo();
 
     // Gives contract DEV to burn during cross
-    const transfer = api.tx.balances.transfer(contract.address, 500000000000n);
-    console.log('singing and sending')
-    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice')); // todo wait for next block
-
-    console.log('signed and sent')
+    const burnAmount = await api.query.styx.burnAmount();
+    const transfer = api.tx.balances.transfer(contract.address, burnAmount);
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
 
     // Initiates cross
     const { gasRequired } = await contract.query.cross(SUDO.address, maxWeight2(api));
@@ -41,7 +40,6 @@ describe.skip('zrml-styx Runtime Calls', function () {
         .signAndSend(sudo(), async (res) => {
           if (res.status.isInBlock) {
             res.events.forEach(({ event: { data, method, section } }) => {
-              console.log('found event', method, section, data.toHuman());
               if (section === 'styx' && method === 'AccountCrossed') {
                 foundCrossEvent = true;
               }

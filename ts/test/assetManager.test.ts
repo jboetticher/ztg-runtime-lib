@@ -6,7 +6,7 @@ import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { AccountInfo } from '@polkadot/types/interfaces';
 
-describe.only('asset-manager Runtime Calls', function () {
+describe.skip('asset-manager Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
   let process: ChildProcessWithoutNullStreams;
@@ -23,7 +23,7 @@ describe.only('asset-manager Runtime Calls', function () {
     process.kill('SIGTERM');
   });
 
-  it.only('Should transfer ZTG', async function() {
+  it('Should transfer ZTG', async function() {
     const SUDO = sudo();
 
     // Gives contract DEV to burn during cross

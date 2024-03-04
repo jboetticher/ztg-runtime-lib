@@ -5,7 +5,7 @@ mod ztg_runtime_example {
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::*;
-    use ztg_runtime_lib::runtime_structs::{AssetManagerCall, PredictionMarketsCall, RuntimeCall, StyxCall};
+    use ztg_runtime_lib::runtime_structs::{AssetManagerCall, CourtCall, PredictionMarketsCall, RuntimeCall, StyxCall};
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -52,6 +52,17 @@ mod ztg_runtime_example {
                     currency_id: ZeitgeistAsset::Ztg, 
                     amount
                 }))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
+
+        // region: Court
+
+        #[ink(message)]
+        pub fn join_court(&mut self, amount: Balance) -> Result<()>  {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::JoinCourt { amount }))
                 .map_err(Into::<Error>::into)
         }
 
