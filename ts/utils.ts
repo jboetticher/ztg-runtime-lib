@@ -24,7 +24,8 @@ const PROOFSIZE = new BN(1_000_000);
 export const startNode = () => {
   const nodeProcess = spawn(
     PATH_TO_NODE,
-    ['--tmp', `--chain=${PATH_TO_CUSTOM_SPEC}`, '--alice', '--validator'],
+    // ['--tmp', `--chain=${PATH_TO_CUSTOM_SPEC}`, '--alice', '--validator'],
+    ['--dev'],
     {
       // stdio: 'inherit', // To show node output in the console
     });

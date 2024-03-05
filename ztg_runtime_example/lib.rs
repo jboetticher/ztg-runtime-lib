@@ -66,6 +66,29 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        #[ink(message)]
+        pub fn delegate(&mut self, amount: Balance, delegations: ink::prelude::vec::Vec<AccountId>) -> Result<()>  {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::Delegate { amount, delegations }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn prepare_exit_court(&mut self) -> Result<()>  {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::PrepareExitCourt))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn exit_court(&mut self, court_participant: AccountId) -> Result<()>  {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::ExitCourt { 
+                    court_participant: court_participant.into() 
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
         // endregion
 
         // region: Styx

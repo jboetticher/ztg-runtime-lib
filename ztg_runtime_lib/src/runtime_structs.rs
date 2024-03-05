@@ -93,7 +93,7 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L660C16-L660C26
     #[codec(index = 3)]
     ExitCourt {
-        court_participant: AccountId, // TODO: replace with account ID lookup
+        court_participant: MultiAddress<AccountId, ()>, // TODO: replace with account ID lookup
     },
     /// Vote as a randomly selected juror for a specific court case.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L717

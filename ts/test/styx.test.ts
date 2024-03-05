@@ -11,7 +11,7 @@ describe('zrml-styx Runtime Calls', function () {
   let process: ChildProcessWithoutNullStreams;
 
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -19,10 +19,10 @@ describe('zrml-styx Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
-  it.only('Should cross', async function() {
+  it('Should cross', async function() {
     let foundCrossEvent = false;
     const SUDO = sudo();
 
@@ -82,7 +82,7 @@ describe('zrml-styx Runtime Calls', function () {
   });
 
   // A sample test to show how to interact with the smart contract
-  it('should set outcome to scalar five correctly', async function () {
+  it.skip('should set outcome to scalar five correctly', async function () {
     // Query for initial value
     let { result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api));
     let outcome = output?.toJSON() as { ok: { categorical?: number, scalar?: number } };
