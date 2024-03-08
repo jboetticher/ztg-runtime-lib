@@ -1,15 +1,15 @@
 import { expect } from 'chai';
 import { createGas, deployTestContract, generateRandomAddress, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
-import { ChildProcessWithoutNullStreams } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { AccountInfo } from '@polkadot/types/interfaces';
 
-describe.skip('asset-manager Runtime Calls', function () {
+describe('asset-manager Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
-  let process: ChildProcessWithoutNullStreams;
+  let process: ChildProcess;
 
   this.beforeAll(async function () {
     process = startNode();

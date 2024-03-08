@@ -1,14 +1,14 @@
 import { expect } from 'chai';
 import { createGas, deployTestContract, generateRandomAddress, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
-import { ChildProcessWithoutNullStreams } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-describe.only('court-styx Runtime Calls', function () {
+describe('zrml-court Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
-  let process: ChildProcessWithoutNullStreams;
+  let process: ChildProcess;
 
   /* 
   NOTE:
@@ -22,7 +22,7 @@ describe.only('court-styx Runtime Calls', function () {
   court should occur last.
   */
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -36,7 +36,7 @@ describe.only('court-styx Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
   it('Should join court', async function () {

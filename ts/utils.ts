@@ -5,11 +5,13 @@ import { WeightV2, Weight } from '@polkadot/types/interfaces/runtime/types';
 import { BN, BN_ONE } from '@polkadot/util';
 import { spawn } from 'child_process';
 import * as fs from "fs";
+import { config } from "dotenv";
 
+config();
 
 // Initialize the keyring and add the sudo account
-const PATH_TO_NODE = '/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist'; // TODO: turn into environment variable
-const PATH_TO_CUSTOM_SPEC = '/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json'; // TODO: turn into environment variable
+const PATH_TO_NODE = process.env.PATH_TO_NODE!;
+const PATH_TO_CUSTOM_SPEC = process.env.PATH_TO_CUSTOM_SPEC!;
 const ZEITGEIST_WS_ENDPOINT = 'ws://127.0.0.1:9944';
 
 // Contract paths
@@ -24,10 +26,10 @@ const PROOFSIZE = new BN(1_000_000);
 export const startNode = () => {
   const nodeProcess = spawn(
     PATH_TO_NODE,
-    // ['--tmp', `--chain=${PATH_TO_CUSTOM_SPEC}`, '--alice', '--validator'],
-    ['--dev'],
+    ['--tmp', `--chain=${PATH_TO_CUSTOM_SPEC}`, '--alice', '--validator'],
+    // ['--dev'],
     {
-      // stdio: 'inherit', // To show node output in the console
+      stdio: 'inherit', // To show node output in the console
     });
 
   console.log(`Node started with PID: ${nodeProcess.pid}`);
@@ -166,13 +168,13 @@ export async function waitBlocks(api: ApiPromise, blocks: number): Promise<void>
 
 /**Generates a random PolkadotJS address */
 export function generateRandomAddress() {
-    // Create a keyring instance. The keyring is used to generate and manage keys.
-    // Specify the type of address you want to generate, e.g., 'sr25519' (Substrate) or 'ed25519'
-    const keyring = new Keyring({ type: 'sr25519' });
-  
-    // Generate a random keypair
-    const pair = keyring.addFromUri(randomAsHex(32));
-  
-    // Get the address from the keypair
-    return pair.address;
+  // Create a keyring instance. The keyring is used to generate and manage keys.
+  // Specify the type of address you want to generate, e.g., 'sr25519' (Substrate) or 'ed25519'
+  const keyring = new Keyring({ type: 'sr25519' });
+
+  // Generate a random keypair
+  const pair = keyring.addFromUri(randomAsHex(32));
+
+  // Get the address from the keypair
+  return pair.address;
 }

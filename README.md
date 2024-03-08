@@ -15,7 +15,7 @@ export CONTRACTS_NODE=/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitge
 Run node:
 
 ```
-/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/zeitgeist/customSpecRaw.json
+/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/ztg-runtime-lib/ts/spec/customSpecRaw.json
 ```
 
 ## Polkadot JS Contracts

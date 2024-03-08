@@ -1,14 +1,14 @@
 import { expect } from 'chai';
 import { createGas, deployTestContract, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
-import { ChildProcessWithoutNullStreams } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-describe('zrml-styx Runtime Calls', function () {
+describe.only('zrml-styx Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
-  let process: ChildProcessWithoutNullStreams;
+  let process: ChildProcess;
 
   this.beforeAll(async function () {
     process = startNode();

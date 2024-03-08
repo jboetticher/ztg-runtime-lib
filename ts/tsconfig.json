@@ -17,6 +17,7 @@
   "include": [
     "test/**/*",
     "utils.ts",
+    "generateSpec.ts"
   ],
   "paths": {
     "*": [
