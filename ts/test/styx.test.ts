@@ -5,7 +5,7 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-describe.only('zrml-styx Runtime Calls', function () {
+describe('zrml-styx Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
   let process: ChildProcess;
@@ -79,31 +79,5 @@ describe.only('zrml-styx Runtime Calls', function () {
     });
 
     expect(foundFeeChangeEvent).to.be.true;
-  });
-
-  // A sample test to show how to interact with the smart contract
-  it.skip('should set outcome to scalar five correctly', async function () {
-    // Query for initial value
-    let { result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api));
-    let outcome = output?.toJSON() as { ok: { categorical?: number, scalar?: number } };
-    expect(outcome.ok.categorical).to.equal(0);
-
-    // Set value
-    const { gasRequired } = await contract.query.setOutcomeToScalarFive(sudo().address, maxWeight2(api));
-    await new Promise(async (resolve, _) => {
-      await contract.tx
-        .setOutcomeToScalarFive(createGas(api, gasRequired))
-        .signAndSend(sudo(), async (res) => {
-          if (res.status.isInBlock) {
-            console.log('set_outcome_to_scalar_five in a block')
-            resolve(null);
-          }
-        });
-    });
-
-    // Query value again
-    ({ result, output } = await contract.query.getOutcome(sudo().address, maxWeight2(api)));
-    outcome = output?.toJSON() as { ok: { categorical?: number, scalar?: number } };
-    expect(outcome.ok.scalar).to.equal(5);
   });
 });

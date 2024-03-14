@@ -44,7 +44,7 @@ describe('asset-manager Runtime Calls', function () {
     
 
     // Query for balance change
-    const { data: { free: balance } } = await api.query.system.account(randomAddress) as AccountInfo;
+    const { data: { free: balance } } = await api.query.system.account(randomAddress) as unknown as AccountInfo;
     expect(balance.toBigInt()).to.equal(transferAmount);
   });
 });

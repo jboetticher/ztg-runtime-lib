@@ -138,7 +138,7 @@ describe('zrml-court Runtime Calls', function () {
   // NOTE: impossible to test without fast-forwarding the node 21k+ blocks, and the period is hard
   // coded so there is no way to change this within config settings.
   // TODO: use the chain state to add a delegate that's already ready to be removed
-  it('Should exit court', async function () {
+  it.skip('Should exit court', async function () {
     let foundEvent = false;
     const SUDO = sudo();
 

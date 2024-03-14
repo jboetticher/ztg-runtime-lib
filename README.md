@@ -18,6 +18,15 @@ Run node:
 /Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/ztg-runtime-lib/ts/spec/customSpecRaw.json
 ```
 
+```
+sudo docker run \
+   -p 4001:4001 \
+   -p 127.0.0.1:8080:8080 \
+   -p 127.0.0.1:8081:8081 \
+   -p 127.0.0.1:5001:5001 \
+   ipfs/go-ipfs
+```
+
 ## Polkadot JS Contracts
 
 How to query with WeightsV2:
