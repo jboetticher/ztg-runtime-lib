@@ -4,7 +4,7 @@ import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
-import { CreateMarketParams, MetadataStorage, RpcContext, Sdk, ZTG, create, createStorage, localhostRpc } from "@zeitgeistpm/sdk";
+import { CreateMarketParams, MetadataStorage, RpcContext, Sdk, create, createStorage } from "@zeitgeistpm/sdk";
 import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 
@@ -130,6 +130,57 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
           if (res.status.isInBlock) {
             res.events.forEach(({ event: { data, method, section } }) => {
               if (section === 'predictionMarkets' && method === 'MarketDisputed') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+  });
+
+  it.only('Should be able to create a market', async function () {
+    const SUDO = sudo();
+
+    // Gives contract DEV to bond during market creation
+    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000n);
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
+
+    // Smart contract disputes the market
+    let foundEvent = false;
+    const creationParams = [
+      { Ztg: {} },
+      0,
+      SUDO.address,
+      { Timestamp: [Date.now(), Date.now() + 100_000_000] },
+      {
+        disputeDuration: 5000,
+        gracePeriod: 0,
+        oracleDuration: 500,
+      },
+      (() => {
+        const arr = new Uint8Array(50).fill(0);
+        arr[0] = 0x15;
+        arr[1] = 0x30;
+        return { Sha3_384: arr.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '0x') };
+      })(),
+      { Permissionless: {} },
+      { Categorical: 2 },
+      { Court: {} },
+      { Lmsr: {} }
+    ];
+
+    const { gasRequired } = await contract.query.createMarket(SUDO.address, maxWeight2(api), ...creationParams);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .createMarket(createGas(api, gasRequired), ...creationParams)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'predictionMarkets' && method === 'MarketCreated') {
                 foundEvent = true;
               }
             });
