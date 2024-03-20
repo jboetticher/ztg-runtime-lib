@@ -107,10 +107,9 @@ pub enum MarketDisputeMechanism {
 #[derive(Clone, Decode, Encode, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum ScoringRule {
-    CPMM,
-    RikiddoSigmoidFeeMarketEma,
     Lmsr,
     Orderbook,
+    Parimutuel
 }
 
 #[derive(scale::Encode, scale::Decode, Clone, PartialEq)]

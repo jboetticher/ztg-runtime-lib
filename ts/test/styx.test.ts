@@ -52,8 +52,7 @@ describe('zrml-styx Runtime Calls', function () {
     expect(foundCrossEvent).to.be.true;
   });
 
-  // setBurnAmount can only be called with the sudo.sudo() extrinsic, so this call runtime
-  // will never be used unless the code changes
+  // NOTE: setBurnAmount can only be called with the sudo.sudo() extrinsic
   it.skip('Should set global burn amount', async function() {
     let foundFeeChangeEvent = false;
 

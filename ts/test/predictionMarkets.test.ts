@@ -66,28 +66,39 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     return marketID;
   }
 
-  // create market -> admin market close -> report
-  it('Should report a market if it is an oracle', async function () {
-    // Creates a market where the oracle is the contract
-    const SUDO = sudo();
-    const marketID = await createMarketWithOracle(SUDO, api, contract.address.toString());
+  // @note: admin_move_market_to_closed can only be called as SUDO
+  it.skip('Should move a market to closed as admin', async function () { });
 
-    // Sudo closes the market
-    const adminMoveMarketToClosedCall = api.tx.predictionMarkets.adminMoveMarketToClosed(marketID);
-    const sudoTx = api.tx.sudo.sudo(adminMoveMarketToClosedCall);
-    await sudoTx.signAndSend(SUDO);
+  // @note: admin_move_market_to_resolved can only be called as SUDO
+  it.skip('Should move a market to resolved as admin', async function () { });
+
+  // @note: approve_market can only be called as SUDO
+  it.skip('Should approve a market', async function () { });
+
+  // @note: request_edit can only be called as SUDO
+  it.skip('Should request an edit', async function () { });
+
+  it('Should buy a complete set', async function () {
+    const SUDO = sudo();
+    const marketID = await createMarketWithOracle(SUDO, api, SUDO.address.toString());
+
+    // Send cash to contract
+    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000n);
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
     await waitBlocks(api, 2);
 
-    // Smart contract disputes the market
+    // Smart contract purchases set
     let foundEvent = false;
-    const { gasRequired } = await contract.query.report(SUDO.address, maxWeight2(api), marketID, { Categorical: 1 });
+    const { gasRequired } = await contract.query.buyCompleteSet(
+      SUDO.address, maxWeight2(api), marketID, "10000000000"
+    );
     await new Promise(async (resolve, _) => {
       await contract.tx
-        .report(createGas(api, gasRequired), marketID, { Categorical: 1 })
+        .buyCompleteSet(createGas(api, gasRequired), marketID, "10000000000")
         .signAndSend(sudo(), async (res) => {
           if (res.status.isInBlock) {
             res.events.forEach(({ event: { data, method, section } }) => {
-              if (section === 'predictionMarkets' && method === 'MarketReported') {
+              if (section === 'predictionMarkets' && method === 'BoughtCompleteSet') {
                 foundEvent = true;
               }
             });
@@ -99,7 +110,7 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  // create market -> admin market close -> report -> dispute
+  // create market -> sudo admin market close -> report -> dispute
   it('Should be able to dispute a reported market', async function () {
     // Creates a market where the oracle is the contract
     const SUDO = sudo();
@@ -141,7 +152,7 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  it.only('Should be able to create a market', async function () {
+  async function contractCreateMarket(advised = false) {
     const SUDO = sudo();
 
     // Gives contract DEV to bond during market creation
@@ -149,8 +160,8 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
     await waitBlocks(api, 2);
 
-    // Smart contract disputes the market
-    let foundEvent = false;
+    // Create market
+    let foundEvent = false, marketId = '';
     const creationParams = [
       { Ztg: {} },
       0,
@@ -167,10 +178,11 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
         arr[1] = 0x30;
         return { Sha3_384: arr.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '0x') };
       })(),
-      { Permissionless: {} },
+      advised ? { Advised: {} } : { Permissionless: {} },
       { Categorical: 2 },
       { Court: {} },
-      { Lmsr: {} }
+      // { Lmsr: {} }
+      'Lmsr'
     ];
 
     const { gasRequired } = await contract.query.createMarket(SUDO.address, maxWeight2(api), ...creationParams);
@@ -182,6 +194,69 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
             res.events.forEach(({ event: { data, method, section } }) => {
               if (section === 'predictionMarkets' && method === 'MarketCreated') {
                 foundEvent = true;
+
+                // TODO: assert that the data is the same
+                marketId = (data.toJSON() as any)[0];
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+
+    return marketId;
+  }
+
+  it('Should be able to create a market', async function () {
+    await contractCreateMarket();
+  });
+
+  // create market -> sudo request edit -> edit market
+  it.only('Should be able to edit a market', async function () {
+    // Create Advised market
+    const marketID = await contractCreateMarket(true);
+
+    // Sudo request edit
+    const SUDO = sudo();
+    const adminMoveMarketToClosedCall = api.tx.predictionMarkets.requestEdit(marketID, '0x0123456789');
+    const sudoTx = api.tx.sudo.sudo(adminMoveMarketToClosedCall);
+    await sudoTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Edit market
+    let foundEvent = false;
+    const editParams = [
+      { Ztg: {} },
+      marketID,
+      SUDO.address,
+      { Timestamp: [Date.now(), Date.now() + 100_000_000] },
+      {
+        disputeDuration: 5000,
+        gracePeriod: 0,
+        oracleDuration: 500,
+      },
+      (() => {
+        const arr = new Uint8Array(50).fill(0);
+        arr[0] = 0x15;
+        arr[1] = 0x30;
+        return { Sha3_384: arr.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '0x') };
+      })(),
+      { Categorical: 5 },
+      { Court: {} },
+      'Lmsr'
+    ];
+
+    const { gasRequired } = await contract.query.editMarket(SUDO.address, maxWeight2(api), ...editParams);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .editMarket(createGas(api, gasRequired), ...editParams)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'predictionMarkets' && method === 'MarketEdited') {
+                foundEvent = true;
               }
             });
             resolve(null);
@@ -191,5 +266,124 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
 
     expect(foundEvent).to.be.true;
   });
+
+  // TODO
+  it.skip('Should be able to redeem shares', async function () { });
+
+  // @note: reject_market can only be called as SUDO
+  it.skip('Should be able to reject a market', async function () { });
+
+  // create market -> sudo admin market close -> report
+  it('Should be able to report a market result', async function () {
+    // Creates a market where the oracle is the contract
+    const SUDO = sudo();
+    const marketID = await createMarketWithOracle(SUDO, api, contract.address.toString());
+
+    // Sudo closes the market
+    const adminMoveMarketToClosedCall = api.tx.predictionMarkets.adminMoveMarketToClosed(marketID);
+    const sudoTx = api.tx.sudo.sudo(adminMoveMarketToClosedCall);
+    await sudoTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Smart contract disputes the market
+    let foundEvent = false;
+    const { gasRequired } = await contract.query.report(SUDO.address, maxWeight2(api), marketID, { Categorical: 1 });
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .report(createGas(api, gasRequired), marketID, { Categorical: 1 })
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'predictionMarkets' && method === 'MarketReported') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+  });
+
+  // TODO:
+  it.skip('Should be able to start a global dispute', async function () { });
+
+  it('Should sell a complete set', async function () {
+    const SUDO = sudo();
+    const marketID = await createMarketWithOracle(SUDO, api, SUDO.address.toString());
+
+    // Send cash to contract
+    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000n);
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
+
+    // Smart contract purchases set
+    {
+      let foundEvent = false;
+      const { gasRequired } = await contract.query.buyCompleteSet(
+        SUDO.address, maxWeight2(api), marketID, "10000000000"
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .buyCompleteSet(createGas(api, gasRequired), marketID, "10000000000")
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'predictionMarkets' && method === 'BoughtCompleteSet') {
+                  foundEvent = true;
+                }
+              });
+              resolve(null);
+            }
+          });
+      });
+
+      expect(foundEvent).to.be.true;
+    }
+
+    // Smart contract sells set
+    {
+      let foundEvent = false;
+      const { gasRequired } = await contract.query.sellCompleteSet(
+        SUDO.address, maxWeight2(api), marketID, "10000000000"
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .sellCompleteSet(createGas(api, gasRequired), marketID, "10000000000")
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'predictionMarkets' && method === 'SoldCompleteSet') {
+                  foundEvent = true;
+                }
+              });
+              resolve(null);
+            }
+          });
+      });
+
+      expect(foundEvent).to.be.true;
+    }
+  });
+
+  // TODO:
+  it.skip('Should be able to create a market and deploy a pool', async function () { });
+
+  // @note: schedule_early_close can only be called as SUDO
+  it.skip('Should be able to schedule an early close', async function () { });
+
+  // TODO:
+  it.skip('Should be able to dispute an early close', async function () { });
+
+  // TODO:
+  it.skip('Should be able to reject an early close', async function () { });
+
+  // TODO:
+  it.skip('Should be able to close a trusted market', async function () { });
+
+  // TODO:
+  it.skip('Should be able to manually close a market', async function () { });
+
 });
 
