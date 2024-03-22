@@ -4,9 +4,10 @@ mod ztg_runtime_example {
     use core::ops::Range;
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
-    use ztg_runtime_lib::primitives::*;
+    use ztg_runtime_lib::primitives::{MarketId, *};
     use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, CourtCall, PredictionMarketsCall, RuntimeCall, StyxCall,
+        AssetManagerCall, AuthorizedCall,
+        CourtCall, PredictionMarketsCall, RuntimeCall, StyxCall,
     };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -56,6 +57,23 @@ mod ztg_runtime_example {
                 }))
                 .map_err(Into::<Error>::into)
         }
+
+        // endregion
+
+        // region: Authorized
+
+        #[ink(message)]
+        pub fn authorize_market_outcome(&mut self, market_id: MarketId, outcome: OutcomeReport) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Authorized(AuthorizedCall::AuthorizeMarketOutcome { market_id, outcome }))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
+
+        // region: Swaps
+
+
 
         // endregion
 
@@ -377,7 +395,6 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
         
-        /// @note: Requires SUDO
         #[ink(message)]
         pub fn schedule_early_close(&mut self, market_id: MarketId) -> Result<()> {
             self.env()
@@ -425,38 +442,5 @@ mod ztg_runtime_example {
 
         // endregion
 
-        // #[ink(message)]
-        // pub fn set_outcome_to_scalar_five(&mut self) {
-        //     self.outcome_report = OutcomeReport::Scalar(5);
-        // }
-
-        // /// Returns the current value of the Flipper's boolean.
-        // #[ink(message)]
-        // pub fn get_outcome(&self) -> OutcomeReport {
-        //     self.outcome_report.clone()
-        // }
-
-        // pub fn create_market(&mut self) -> ink::env::Result<()> {
-        //     self.env().call_runtime(&RuntimeCall::PredictionMarkets(
-        //         PredictionMarketsCall::CreateMarket {
-        //             base_asset: ZeitgeistAsset::Ztg,
-        //             creator_fee: Perbill::zero(),
-        //             oracle: self.env().account_id(),
-        //             period: MarketPeriod::Block(Range { start: 5, end: 8 }),
-        //             deadlines: Deadlines {
-        //                 grace_period: 0,
-        //                 oracle_duration: 0,
-        //                 dispute_duration: 0,
-        //             },
-        //             metadata: MultiHash::Sha3_384([0; 50]),
-        //             creation: MarketCreation::Permissionless,
-        //             market_type: MarketType::Categorical(2),
-        //             dispute_mechanism: None,
-        //             scoring_rule: ScoringRule::Orderbook,
-        //         },
-        //     ))?;
-
-        //     Ok(())
-        // }
     }
 }
