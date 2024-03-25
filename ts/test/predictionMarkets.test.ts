@@ -9,7 +9,7 @@ import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { Decimal } from 'decimal.js'
 
-describe.only('zrml-prediction-markets Runtime Calls', function () {
+describe('zrml-prediction-markets Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;
@@ -369,7 +369,9 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
 
   // TODO:
   // create market -> sudo admin market close -> sudo report -> sudo dispute -> global dispute
-  it.skip('Should be able to start a global dispute', async function () {
+  it('Should be able to start a global dispute', async function () {
+    expect("TODO").to.be.null;
+
     // Creates a market with Court dispute
     const SUDO = sudo();
     const marketID = await createCategoricalMarket(SUDO, api, SUDO.address.toString(), "Court");
@@ -390,7 +392,8 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     await disputeTx.signAndSend(SUDO);
     await waitBlocks(api, 2);
 
-    // TODO: somehow the market doesn't have a court
+    // TODO: market doesn't have a court because there has to be a big process before then
+    // https://docs.zeitgeist.pm/docs/learn/court
 
     // Contract starts global dispute
   });
@@ -577,14 +580,23 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  // TODO:
+  // @note: reject_early_close can only be called as SUDO or as an Advisory Committee
   it.skip('Should be able to reject an early close', async function () { });
 
-  // TODO:
+  // @note: close_trusted_market can only be called as SUDO or as an Advisory Committee
   it.skip('Should be able to close a trusted market', async function () { });
 
   // TODO:
-  it.skip('Should be able to manually close a market', async function () { });
+  it('Should be able to manually close a market', async function () { 
+    expect("TODO").to.be.null;
 
+    // Create market
+    const SUDO = sudo();
+    await createCategoricalMarket(SUDO, api, SUDO.address.toString());
+
+    // Use SUDO to edit storage to "break" the market
+
+    // Manually close market
+  });
 });
 

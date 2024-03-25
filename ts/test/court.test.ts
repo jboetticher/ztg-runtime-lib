@@ -4,11 +4,16 @@ import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
+import { CreateMarketParams, MetadataStorage, RpcContext, Sdk, ZTG, create, createStorage } from "@zeitgeistpm/sdk";
+import { Memory } from "@zeitgeistpm/web3.storage";
+import { KeyringPair } from '@polkadot/keyring/types.js';
+import { Decimal } from 'decimal.js'
 
 describe('zrml-court Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
   let process: ChildProcess;
+  let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
 
   /* 
   NOTE:
@@ -22,25 +27,34 @@ describe('zrml-court Runtime Calls', function () {
   court should occur last.
   */
   this.beforeAll(async function () {
-    process = startNode();
+    // process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
 
-    // Gives contract a lot of DEV to burn during cross
-    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000_000);
+    // Gives the contract a lot of DEV
+    const transfer = api.tx.balances.transfer(contract.address, "500000000000000000");
     await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
     await waitBlocks(api, 2);
-    console.log('before all finished')
+
+    // Initialize Zeitgeist SDK for local
+    zeitgeistSDK = await create({
+      provider: ['ws://127.0.0.1:9944'],
+      storage: createStorage(Memory.storage())
+    });
+
+    // Make alice join the pool with a lot of cash
+    const joinCourt = api.tx.court.joinCourt("500000000000000000");
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
   });
 
   this.afterAll(async function () {
     await api.disconnect();
-    process.kill('SIGTERM');
+    // process.kill('SIGTERM');
   });
 
   it('Should join court', async function () {
-    console.log('starting join court')
     let foundEvent = false;
     const SUDO = sudo();
     const JUROR_STAKE = 5_000_000_000_000n;
@@ -98,8 +112,66 @@ describe('zrml-court Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
+  // create -> close -> report -> dispute
+  async function createCourt() {
+    const SUDO = sudo();
+
+    const params: CreateMarketParams<typeof zeitgeistSDK> = {
+      baseAsset: { Ztg: null },
+      signer: SUDO,
+      disputeMechanism: "Court",
+      marketType: { Categorical: 2 },
+      oracle: SUDO.address,
+      period: { Timestamp: [Date.now(), Date.now() + 60 * 60 * 24 * 1000 * 2] },
+      deadlines: {
+        disputeDuration: 5000,
+        gracePeriod: 0, // NOTE: grace period is 0 so that dispute & report can happen rapidly
+        oracleDuration: 500,
+      },
+      metadata: {
+        __meta: "markets",
+        question: "Will the example work?",
+        description: "Testing the sdk.",
+        slug: "standalone-market-example",
+        categories: [
+          { name: "yes", ticker: "Y" },
+          { name: "no", ticker: "N" },
+        ],
+        tags: ["dev"],
+      },
+      scoringRule: "Lmsr",
+      creationType: "Permissionless"
+    };
+    const response = await zeitgeistSDK.model.markets.create(params);
+    const marketCreatedEvent = response.raw.events.find(x => x.event.toHuman()['method'] === 'MarketCreated');
+    const marketID = (marketCreatedEvent?.event?.toHuman()['data'] as any[])[0];
+    await waitBlocks(api, 1);
+
+    // Sudo closes the market
+    const adminMoveMarketToClosedCall = api.tx.predictionMarkets.adminMoveMarketToClosed(marketID);
+    const sudoTx = api.tx.sudo.sudo(adminMoveMarketToClosedCall);
+    await sudoTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Sudo reports the market
+    const reportTx = api.tx.predictionMarkets.report(marketID, { Categorical: 1 });
+    await reportTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Sudo disputes the market
+    const disputeTx = api.tx.predictionMarkets.dispute(marketID);
+    await disputeTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // TODO: get over NotInVotingPeriod
+
+    return marketID;
+  }
+
   // TODO: how do we get a court ID?
-  it.skip('Should vote', async function () { });
+  it('Should vote', async function () {
+    await createCourt();
+  });
 
   // TODO: how do we get a court ID?
   it.skip('Should denounce a vote', async function () { });

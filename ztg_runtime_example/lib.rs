@@ -6,8 +6,8 @@ mod ztg_runtime_example {
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::{MarketId, *};
     use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, AuthorizedCall,
-        CourtCall, PredictionMarketsCall, RuntimeCall, StyxCall,
+        AssetManagerCall, AuthorizedCall, CourtCall, ParimutelCall, 
+        PredictionMarketsCall, RuntimeCall, StyxCall
     };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -442,5 +442,35 @@ mod ztg_runtime_example {
 
         // endregion
 
+        // region: Parimutuel
+
+        #[ink(message)]
+        pub fn parimutuel_buy(&mut self, asset: ZeitgeistAsset, amount: Balance) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Parimutuel(
+                    ParimutelCall::Buy { asset, amount }
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn parimutuel_claim_rewards(&mut self, market_id: MarketId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Parimutuel(
+                    ParimutelCall::ClaimRewards { market_id }
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn parimutuel_claim_refunds(&mut self, refund_asset: ZeitgeistAsset) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Parimutuel(
+                    ParimutelCall::ClaimRefunds { refund_asset }
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
     }
 }

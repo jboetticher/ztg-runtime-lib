@@ -612,7 +612,7 @@ pub enum OrderbookCall {
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ParimutelCall {
     /// Buy parimutuel shares for the market's base asset.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L203
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/parimutuel/src/lib.rs#L203
     #[codec(index = 0)]
     Buy {
         asset: ZeitgeistAsset, // TODO: ensure that this is the same as Asset<MarketIdOf<T>>,
@@ -620,15 +620,15 @@ pub enum ParimutelCall {
         amount: Balance,
     },
     /// Claim winnings from a resolved market.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L221
+    /// https://github.com/zeitgeistpm/zeitgeist/blob/release-v0.5.0/zrml/parimutuel/src/lib.rs#L221
     #[codec(index = 1)]
     ClaimRewards {
         market_id: MarketId
     },
     /// Refund the base asset of losing categorical outcome assets.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L240
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/parimutuel/src/lib.rs#L240
     #[codec(index = 2)]
     ClaimRefunds {
-        refund_asset: MarketId
+        refund_asset: ZeitgeistAsset
     },
 }

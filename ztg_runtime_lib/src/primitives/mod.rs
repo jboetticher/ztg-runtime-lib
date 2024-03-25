@@ -121,6 +121,7 @@ pub enum ZeitgeistAsset {
     PoolShare, //(SerdeWrapper<PoolId>),
     Ztg,       // default
     ForeignAsset(u32),
+    ParimutuelShare(u128, u16)
 }
 
 // endregion
