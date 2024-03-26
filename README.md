@@ -36,5 +36,5 @@ PredictionMarkets       IN PROGRESS
 Styx                    COMPLETE BAR SUDO
 GlobalDisputes          TODO
 NeoSwaps                TODO
-Orderbook               TODO
+Orderbook               COMPLETE
 Parimutuel              COMPLETE
