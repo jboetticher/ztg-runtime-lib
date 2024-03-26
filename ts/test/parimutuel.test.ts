@@ -9,7 +9,7 @@ import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { Decimal } from 'decimal.js'
 
-describe.only('zrml-prediction-markets Runtime Calls', function () {
+describe('zrml-prediction-markets Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;
@@ -109,7 +109,7 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
   });
 
   // create market -> contract buy -> admin close -> report -> admin resolve -> parimutuel claim
-  it.only('Should claim parimutuel rewards', async function () {
+  it('Should claim parimutuel rewards', async function () {
     const SUDO = sudo();
     const marketID = await createMarket(SUDO, api, SUDO.address.toString());
 
@@ -171,7 +171,7 @@ describe.only('zrml-prediction-markets Runtime Calls', function () {
     }
   });
 
-  it.only('Should refund parimutuel', async function () {
+  it('Should refund parimutuel', async function () {
     const SUDO = sudo();
     const marketID = await createMarket(SUDO, api, SUDO.address.toString());
 
