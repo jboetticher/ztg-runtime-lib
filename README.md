@@ -29,12 +29,12 @@ https://github.com/paritytech/substrate/blob/033d4e86cc7eff0066cd376b9375f815761
 ## Finished Tests
 
 AssetManager            COMPLETE
-Authorized              TODO
+Authorized              COMPLETE BAR SUDO
 Court                   IN PROGRESS
 Swaps                   TODO
 PredictionMarkets       IN PROGRESS
-Styx                    COMPLETE
+Styx                    COMPLETE BAR SUDO
 GlobalDisputes          TODO
 NeoSwaps                TODO
 Orderbook               TODO
-Parimutuel              TODO
+Parimutuel              COMPLETE

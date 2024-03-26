@@ -1,13 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[ink::contract]
 mod ztg_runtime_example {
-    use core::ops::Range;
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
-    use ztg_runtime_lib::primitives::{MarketId, *};
+    use ztg_runtime_lib::primitives::{MarketId, OrderId, *};
     use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, AuthorizedCall, CourtCall, ParimutelCall, 
-        PredictionMarketsCall, RuntimeCall, StyxCall
+        AssetManagerCall, AuthorizedCall, CourtCall, OrderbookCall, ParimutelCall,
+        PredictionMarketsCall, RuntimeCall, StyxCall,
     };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -62,18 +61,23 @@ mod ztg_runtime_example {
 
         // region: Authorized
 
+        /// @note: Requires SUDO or Advisory Committee
         #[ink(message)]
-        pub fn authorize_market_outcome(&mut self, market_id: MarketId, outcome: OutcomeReport) -> Result<()> {
+        pub fn authorize_market_outcome(
+            &mut self,
+            market_id: MarketId,
+            outcome: OutcomeReport,
+        ) -> Result<()> {
             self.env()
-                .call_runtime(&RuntimeCall::Authorized(AuthorizedCall::AuthorizeMarketOutcome { market_id, outcome }))
+                .call_runtime(&RuntimeCall::Authorized(
+                    AuthorizedCall::AuthorizeMarketOutcome { market_id, outcome },
+                ))
                 .map_err(Into::<Error>::into)
         }
 
         // endregion
 
         // region: Swaps
-
-
 
         // endregion
 
@@ -279,12 +283,12 @@ mod ztg_runtime_example {
                         creation,
                         market_type,
                         dispute_mechanism,
-                        scoring_rule
+                        scoring_rule,
                     },
                 ))
                 .map_err(Into::<Error>::into)
         }
-        
+
         #[ink(message)]
         pub fn edit_market(
             &mut self,
@@ -309,7 +313,7 @@ mod ztg_runtime_example {
                         metadata,
                         market_type,
                         dispute_mechanism,
-                        scoring_rule
+                        scoring_rule,
                     },
                 ))
                 .map_err(Into::<Error>::into)
@@ -326,10 +330,17 @@ mod ztg_runtime_example {
 
         /// @note: Requires SUDO
         #[ink(message)]
-        pub fn reject_market(&mut self, market_id: MarketId, reject_reason: ink::prelude::vec::Vec<u8>) -> Result<()> {
+        pub fn reject_market(
+            &mut self,
+            market_id: MarketId,
+            reject_reason: ink::prelude::vec::Vec<u8>,
+        ) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::PredictionMarkets(
-                    PredictionMarketsCall::RejectMarket { market_id, reject_reason },
+                    PredictionMarketsCall::RejectMarket {
+                        market_id,
+                        reject_reason,
+                    },
                 ))
                 .map_err(Into::<Error>::into)
         }
@@ -374,7 +385,7 @@ mod ztg_runtime_example {
             dispute_mechanism: Option<MarketDisputeMechanism>,
             amount: Balance,
             spot_prices: ink::prelude::vec::Vec<Balance>,
-            swap_fee: Balance
+            swap_fee: Balance,
         ) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::PredictionMarkets(
@@ -389,12 +400,12 @@ mod ztg_runtime_example {
                         dispute_mechanism,
                         amount,
                         spot_prices,
-                        swap_fee
+                        swap_fee,
                     },
                 ))
                 .map_err(Into::<Error>::into)
         }
-        
+
         #[ink(message)]
         pub fn schedule_early_close(&mut self, market_id: MarketId) -> Result<()> {
             self.env()
@@ -442,32 +453,80 @@ mod ztg_runtime_example {
 
         // endregion
 
+        // region: Orderbook
+
+        #[ink(message)]
+        pub fn remove_order(&mut self, order_id: OrderId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Orderbook(OrderbookCall::RemoveOrder {
+                    order_id,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn fill_order(
+            &mut self,
+            order_id: OrderId,
+            maker_partial_fill: Option<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Orderbook(OrderbookCall::FillOrder {
+                    order_id,
+                    maker_partial_fill,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn place_order(
+            &mut self,
+            market_id: MarketId,
+            maker_asset: ZeitgeistAsset,
+            maker_amount: Balance,
+            taker_asset: ZeitgeistAsset,
+            taker_amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Orderbook(OrderbookCall::PlaceOrder {
+                    market_id,
+                    maker_asset,
+                    maker_amount,
+                    taker_asset,
+                    taker_amount
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
+
         // region: Parimutuel
 
         #[ink(message)]
         pub fn parimutuel_buy(&mut self, asset: ZeitgeistAsset, amount: Balance) -> Result<()> {
             self.env()
-                .call_runtime(&RuntimeCall::Parimutuel(
-                    ParimutelCall::Buy { asset, amount }
-                ))
+                .call_runtime(&RuntimeCall::Parimutuel(ParimutelCall::Buy {
+                    asset,
+                    amount,
+                }))
                 .map_err(Into::<Error>::into)
         }
 
         #[ink(message)]
         pub fn parimutuel_claim_rewards(&mut self, market_id: MarketId) -> Result<()> {
             self.env()
-                .call_runtime(&RuntimeCall::Parimutuel(
-                    ParimutelCall::ClaimRewards { market_id }
-                ))
+                .call_runtime(&RuntimeCall::Parimutuel(ParimutelCall::ClaimRewards {
+                    market_id,
+                }))
                 .map_err(Into::<Error>::into)
         }
 
         #[ink(message)]
         pub fn parimutuel_claim_refunds(&mut self, refund_asset: ZeitgeistAsset) -> Result<()> {
             self.env()
-                .call_runtime(&RuntimeCall::Parimutuel(
-                    ParimutelCall::ClaimRefunds { refund_asset }
-                ))
+                .call_runtime(&RuntimeCall::Parimutuel(ParimutelCall::ClaimRefunds {
+                    refund_asset,
+                }))
                 .map_err(Into::<Error>::into)
         }
 
