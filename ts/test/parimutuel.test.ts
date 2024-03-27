@@ -16,7 +16,7 @@ describe('zrml-prediction-markets Runtime Calls', function () {
   let process: ChildProcess;
 
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -35,7 +35,7 @@ describe('zrml-prediction-markets Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
   async function createMarket(signer: KeyringPair, api: ApiPromise, oracle: string) {

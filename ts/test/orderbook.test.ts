@@ -16,7 +16,7 @@ describe('zrml-orderbook Runtime Calls', function () {
   let orderbookMarketId: number;
 
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -39,7 +39,7 @@ describe('zrml-orderbook Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
   async function createOrderbookMarket(signer: KeyringPair, api: ApiPromise, oracle: string, disputeMechanism: "Authorized" | "Court" = "Authorized") {

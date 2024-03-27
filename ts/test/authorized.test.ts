@@ -22,6 +22,6 @@ describe('zrml-authorized Runtime Calls', function () {
     process.kill('SIGTERM');
   });
 
-  // NOTE: setBurnAmount can only be called with the sudo.sudo() extrinsic
+  // NOTE: can only be called with the sudo.sudo() extrinsic
   it.skip('Should authorize a market outcome', async function() {});
 });
