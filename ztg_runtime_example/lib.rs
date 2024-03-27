@@ -3,9 +3,9 @@
 mod ztg_runtime_example {
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
-    use ztg_runtime_lib::primitives::{MarketId, OrderId, *};
+    use ztg_runtime_lib::primitives::{AssetIndexType, MarketId, OrderId, *};
     use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, AuthorizedCall, CourtCall, OrderbookCall, ParimutelCall,
+        AssetManagerCall, AuthorizedCall, CourtCall, NeoSwapsCall, OrderbookCall, ParimutelCall,
         PredictionMarketsCall, RuntimeCall, StyxCall,
     };
 
@@ -453,6 +453,109 @@ mod ztg_runtime_example {
 
         // endregion
 
+        // region: Neoswaps
+
+        #[ink(message)]
+        pub fn neoswap_buy(
+            &mut self,
+            market_id: MarketId,
+            asset_count: AssetIndexType,
+            asset_out: ZeitgeistAsset,
+            amount_in: Balance,
+            min_amount_out: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::Buy {
+                    market_id,
+                    asset_count,
+                    asset_out,
+                    amount_in,
+                    min_amount_out,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn neoswap_sell(
+            &mut self,
+            market_id: MarketId,
+            asset_count: AssetIndexType,
+            asset_in: ZeitgeistAsset,
+            amount_in: Balance,
+            min_amount_out: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::Sell {
+                    market_id,
+                    asset_count,
+                    asset_in,
+                    amount_in,
+                    min_amount_out,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn neoswap_join(
+            &mut self,
+            market_id: MarketId,
+            pool_shares_amount: Balance,
+            max_amounts_in: ink::prelude::vec::Vec<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::Join {
+                    market_id,
+                    pool_shares_amount,
+                    max_amounts_in,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn neoswap_exit(
+            &mut self,
+            market_id: MarketId,
+            pool_shares_amount_out: Balance,
+            min_amounts_out: ink::prelude::vec::Vec<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::Exit {
+                    market_id,
+                    pool_shares_amount_out,
+                    min_amounts_out,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn neoswap_withdraw_fees(&mut self, market_id: MarketId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::WithdrawFees {
+                    market_id,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn neoswap_deploy_pool(
+            &mut self,
+            market_id: MarketId,
+            amount: Balance,
+            spot_prices: ink::prelude::vec::Vec<Balance>,
+            swap_fee: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::NeoSwaps(NeoSwapsCall::DeployPool {
+                    market_id,
+                    amount,
+                    spot_prices,
+                    swap_fee
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
+
         // region: Orderbook
 
         #[ink(message)]
@@ -493,7 +596,7 @@ mod ztg_runtime_example {
                     maker_asset,
                     maker_amount,
                     taker_asset,
-                    taker_amount
+                    taker_amount,
                 }))
                 .map_err(Into::<Error>::into)
         }
