@@ -16,7 +16,7 @@ describe('zrml-prediction-markets Runtime Calls', function () {
   let process: ChildProcess;
 
   this.beforeAll(async function () {
-    process = startNode();
+    // process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -30,7 +30,7 @@ describe('zrml-prediction-markets Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    process.kill('SIGTERM');
+    // process.kill('SIGTERM');
   });
 
   async function createCategoricalMarket(signer: KeyringPair, api: ApiPromise, oracle: string, disputeMechanism: "Authorized" | "Court" = "Authorized") {
@@ -586,17 +586,97 @@ describe('zrml-prediction-markets Runtime Calls', function () {
   // @note: close_trusted_market can only be called as SUDO or as an Advisory Committee
   it.skip('Should be able to close a trusted market', async function () { });
 
-  // TODO:
-  it('Should be able to manually close a market', async function () { 
-    expect("TODO").to.be.null;
-
+  it('Should be able to manually close a market', async function () {
     // Create market
     const SUDO = sudo();
-    await createCategoricalMarket(SUDO, api, SUDO.address.toString());
+    const marketID = await createCategoricalMarket(SUDO, api, SUDO.address.toString());
 
-    // Use SUDO to edit storage to "break" the market
+    // Set current timestamp to what will be the past by the end of this test
+    const timestamp = parseInt((await api.query.timestamp.now()).toString());
 
-    // Manually close market
+    // Use SUDO to edit storage to set market's period to what will be the past
+    {
+      // Get market data & its storage key
+      const marketData = await api.query.marketCommons.markets(marketID);
+      const marketDataJSON: MarketData = marketData.toJSON() as unknown as MarketData;
+      const marketStorageKey = api.query.marketCommons.markets.key(marketID);
+
+      // Edit data
+      if (marketDataJSON.period.timestamp) {
+        marketDataJSON.period.timestamp = [timestamp, timestamp];
+      }
+
+      // Insert data via SUDO
+      const encodedData = api.createType('ZeitgeistPrimitivesMarket', marketDataJSON);
+      const keyValue = api.createType('(StorageKey, StorageData)', [marketStorageKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(
+        api.tx.system.setStorage([keyValue])
+      );
+      await new Promise(async resolve => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => {
+          if (status.isInBlock || status.isFinalized) {
+            console.log(`Transaction included in block with status: ${status.type}`);
+            resolve(null);
+          }
+        });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Use SUDO to edit storage to add marketID in time frame map
+    {
+      // Use SUDO to insert into predictionMarkets.marketIdsPerCloseTimeFrame
+      // NOTE: assumes that the MILLISECS_PER_BLOCK in calculate_time_frame_of_moment is 12000
+      // https://github.com/zeitgeistpm/zeitgeist/blob/4d3519c31b52e89dcbff2f992fdc478cc7a3f054/zrml/prediction-markets/src/lib.rs#L2366-L2368
+      const blockForFakeScheduledClose = (timestamp / 12000).toFixed(0);
+      console.log("Block for scheduled close:", blockForFakeScheduledClose);
+
+      // Get marketIdsPerCloseTimeFrame storage key
+      const timeFramesStorageKey = api.query.predictionMarkets.marketIdsPerCloseTimeFrame.key(blockForFakeScheduledClose);
+      const timeFrameWithMarketId = [marketID];
+
+      const encodedData = api.createType('Vec<u128>', timeFrameWithMarketId);
+      const keyValue = api.createType('(StorageKey, StorageData)', [timeFramesStorageKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(
+        api.tx.system.setStorage([keyValue])
+      );
+      await new Promise(async resolve => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => {
+          if (status.isInBlock || status.isFinalized) {
+            console.log(`Transaction included in block with status: ${status.type}`);
+            resolve(null);
+          }
+        });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Manually close market, it should be the past after waiting ~2 blocks
+    let foundEvent = false;
+    const { gasRequired } = await contract.query.manuallyCloseMarket(SUDO.address, maxWeight2(api), marketID);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .manuallyCloseMarket(createGas(api, gasRequired), marketID)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'predictionMarkets' && method === 'MarketClosed') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
   });
 });
 
+interface MarketData {
+  period: {
+    timestamp?: [number, number];
+    // Other fields...
+  };
+  // Other fields...
+}

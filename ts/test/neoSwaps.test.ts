@@ -9,7 +9,7 @@ import { KeyringPair } from '@polkadot/keyring/types.js';
 import { Memory } from "@zeitgeistpm/web3.storage";
 import { Decimal } from 'decimal.js'
 
-describe.only('zrml-neo-swaps Runtime Calls', function () {
+describe('zrml-neo-swaps Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;
