@@ -6,7 +6,7 @@ mod ztg_runtime_example {
     use ztg_runtime_lib::primitives::{AssetIndexType, MarketId, OrderId, *};
     use ztg_runtime_lib::runtime_structs::{
         AssetManagerCall, AuthorizedCall, CourtCall, NeoSwapsCall, OrderbookCall, ParimutelCall,
-        PredictionMarketsCall, RuntimeCall, StyxCall,
+        PredictionMarketsCall, RuntimeCall, StyxCall, SwapsCall,
     };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -78,6 +78,180 @@ mod ztg_runtime_example {
         // endregion
 
         // region: Swaps
+
+        #[ink(message)]
+        pub fn pool_exit(
+            &mut self,
+            pool_id: PoolId,
+            pool_amount: Balance,
+            min_assets_out: ink::prelude::vec::Vec<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(SwapsCall::PoolExit {
+                    pool_id,
+                    pool_amount,
+                    min_assets_out,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn pool_exit_with_exact_asset_amount(
+            &mut self,
+            pool_id: PoolId,
+            asset: ZeitgeistAsset, // TODO: figure out of AssetOf<T> is this value
+            asset_amount: Balance,
+            max_pool_amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(
+                    SwapsCall::PoolExitWithExactAssetAmount {
+                        pool_id,
+                        asset,
+                        asset_amount,
+                        max_pool_amount,
+                    },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn pool_exit_with_exact_pool_amount(
+            &mut self,
+            pool_id: PoolId,
+            asset: ZeitgeistAsset, // TODO: figure out of AssetOf<T> is this value
+            pool_amount: Balance,
+            min_asset_amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(
+                    SwapsCall::PoolExitWithExactPoolAmount {
+                        pool_id,
+                        asset,
+                        pool_amount,
+                        min_asset_amount,
+                    },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn pool_join(
+            &mut self,
+            pool_id: PoolId,
+            pool_amount: Balance,
+            max_assets_in: ink::prelude::vec::Vec<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(SwapsCall::PoolJoin {
+                    pool_id,
+                    pool_amount,
+                    max_assets_in,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn pool_join_with_exact_asset_amount(
+            &mut self,
+            pool_id: PoolId,
+            asset_in: ZeitgeistAsset,
+            asset_amount: Balance,
+            min_pool_amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(
+                    SwapsCall::PoolJoinWithExactAssetAmount {
+                        pool_id,
+                        asset_in,
+                        asset_amount,
+                        min_pool_amount,
+                    },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn pool_join_with_exact_pool_amount(
+            &mut self,
+            pool_id: PoolId,
+            asset: ZeitgeistAsset,
+            pool_amount: Balance,
+            max_asset_amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(
+                    SwapsCall::PoolJoinWithExactPoolAmount {
+                        pool_id,
+                        asset,
+                        pool_amount,
+                        max_asset_amount,
+                    },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn swap_exact_amount_in(
+            &mut self,
+            pool_id: PoolId,
+            asset_in: ZeitgeistAsset,
+            asset_amount_in: Balance,
+            asset_out: ZeitgeistAsset,
+            min_asset_amount_out: Option<Balance>,
+            max_price: Option<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(SwapsCall::SwapExactAmountIn {
+                    pool_id,
+                    asset_in,
+                    asset_amount_in,
+                    asset_out,
+                    min_asset_amount_out,
+                    max_price,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn swap_exact_amount_out(
+            &mut self,
+            pool_id: PoolId,
+            asset_in: ZeitgeistAsset,
+            max_asset_amount_in: Option<u128>,
+            asset_out: ZeitgeistAsset,
+            asset_amount_out: u128,
+            max_price: Option<u128>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(SwapsCall::SwapExactAmountOut {
+                    pool_id,
+                    asset_in,
+                    max_asset_amount_in,
+                    asset_out,
+                    asset_amount_out,
+                    max_price,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn force_pool_exit(
+            &mut self,
+            who: AccountId,
+            pool_id: PoolId,
+            pool_amount: Balance,
+            min_assets_out: ink::prelude::vec::Vec<Balance>,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Swaps(SwapsCall::ForcePoolExit {
+                    who,
+                    pool_id,
+                    pool_amount,
+                    min_assets_out,
+                }))
+                .map_err(Into::<Error>::into)
+        }
 
         // endregion
 
@@ -549,7 +723,7 @@ mod ztg_runtime_example {
                     market_id,
                     amount,
                     spot_prices,
-                    swap_fee
+                    swap_fee,
                 }))
                 .map_err(Into::<Error>::into)
         }
