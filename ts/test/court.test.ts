@@ -32,20 +32,20 @@ describe.only('zrml-court Runtime Calls', function () {
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
 
-    // Gives the contract a lot of DEV
-    const transfer = api.tx.balances.transfer(contract.address, "500000000000000000");
-    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
-    await waitBlocks(api, 2);
-
     // Initialize Zeitgeist SDK for local
     zeitgeistSDK = await create({
       provider: ['ws://127.0.0.1:9944'],
       storage: createStorage(Memory.storage())
     });
 
-    // Make alice join the pool with a lot of cash
-    const joinCourt = api.tx.court.joinCourt("500000000000000000");
+    // Gives the contract a lot of DEV
+    const transfer = api.tx.balances.transfer(contract.address, "500000000000000000000000000");
     await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+
+    // Sudo joins court with a lot of cash
+    // const sudoJoinsCourt = api.tx.court.joinCourt("100000000000000000000000000");
+    // await sudoJoinsCourt.signAndSend(sudo());
+
     await waitBlocks(api, 2);
   });
 
@@ -54,12 +54,11 @@ describe.only('zrml-court Runtime Calls', function () {
     // process.kill('SIGTERM');
   });
 
-  it('Should join court', async function () {
+
+  async function contractJoinCourt(JUROR_STAKE: bigint) {
     let foundEvent = false;
     const SUDO = sudo();
-    const JUROR_STAKE = 5_000_000_000_000n;
 
-    // Initiates pool join (contract should already be funded)
     const { gasRequired } = await contract.query.joinCourt(SUDO.address, maxWeight2(api), JUROR_STAKE);
     await new Promise(async (resolve, _) => {
       await contract.tx
@@ -77,40 +76,7 @@ describe.only('zrml-court Runtime Calls', function () {
     });
 
     expect(foundEvent).to.be.true;
-  });
-
-  it('Should delegate', async function () {
-    let foundEvent = false;
-    const SUDO = sudo();
-    const DELEGATION_AMOUNT = 5_000_000_000_000n;
-
-    // Have Eve join court
-    const eveAccount = new Keyring({ type: 'sr25519' }).addFromUri('//Eve');
-    const joinDelegator = api.tx.court.joinCourt(DELEGATION_AMOUNT);
-    await joinDelegator.signAndSend(eveAccount);
-    await waitBlocks(api, 2);
-
-    // Have the contract delegate to Eve (contract should already be funded)
-    const { gasRequired } = await contract.query.delegate(
-      SUDO.address, maxWeight2(api), DELEGATION_AMOUNT, [eveAccount.address]
-    );
-    await new Promise(async (resolve, _) => {
-      await contract.tx
-        .delegate(createGas(api, gasRequired), DELEGATION_AMOUNT, [eveAccount.address])
-        .signAndSend(sudo(), async (res) => {
-          if (res.status.isInBlock) {
-            res.events.forEach(({ event: { data, method, section } }) => {
-              if (section === 'court' && method === 'DelegatorJoined') {
-                foundEvent = true;
-              }
-            });
-            resolve(null);
-          }
-        });
-    });
-
-    expect(foundEvent).to.be.true;
-  });
+  }
 
   // create -> close -> report -> dispute
   async function createCourt() {
@@ -163,14 +129,108 @@ describe.only('zrml-court Runtime Calls', function () {
     await disputeTx.signAndSend(SUDO);
     await waitBlocks(api, 2);
 
-    // TODO: get over NotInVotingPeriod
-
-    return marketID;
+    // Get marketID to courtID
+    return (await api.query.court.marketIdToCourtId(marketID)).unwrap().toString();
   }
 
-  // TODO: how do we get a court ID?
+  it('Should join court', async function () {
+    const JUROR_STAKE = 5_000_000_000_000n;
+
+    // Initiates pool join (contract should already be funded)
+    await contractJoinCourt(JUROR_STAKE);
+  });
+
+  it('Should delegate', async function () {
+    let foundEvent = false;
+    const SUDO = sudo();
+    const DELEGATION_AMOUNT = 5_000_000_000_000n;
+
+    // Have Eve join court
+    const eveAccount = new Keyring({ type: 'sr25519' }).addFromUri('//Eve');
+    const joinDelegator = api.tx.court.joinCourt(DELEGATION_AMOUNT);
+    await joinDelegator.signAndSend(eveAccount);
+    await waitBlocks(api, 2);
+
+    // Have the contract delegate to Eve (contract should already be funded)
+    const { gasRequired } = await contract.query.delegate(
+      SUDO.address, maxWeight2(api), DELEGATION_AMOUNT, [eveAccount.address]
+    );
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .delegate(createGas(api, gasRequired), DELEGATION_AMOUNT, [eveAccount.address])
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'court' && method === 'DelegatorJoined') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+
+    // Remove eve from the pool
+    await api.tx.court.prepareExitCourt().signAndSend(eveAccount);
+  });
+
   it('Should vote', async function () {
-    await createCourt();
+    const SUDO = sudo();
+    await contractJoinCourt(100000000000000000000000000n);
+
+    // This test will only pass if we guarantee that the contract is chosen
+    const courtPool: any[] = (await api.query.court.courtPool()).toJSON() as any[];
+    expect(courtPool.length).to.equal(1);
+
+    const courtID = await createCourt();
+
+    console.log('Got court ID:', courtID);
+
+    // Sudo sets preVote round to end in past so that voting can occur
+    const courtInfoJSON: CourtInfo = (await api.query.court.courts(courtID)).toJSON() as CourtInfo;
+    const courtInfoKey = api.query.court.courts.key(courtID);
+    courtInfoJSON.roundEnds.preVote = 1;
+    const encodedData = api.createType('ZrmlCourtCourtInfo', courtInfoJSON);
+    const keyValue = api.createType('(StorageKey, StorageData)', [courtInfoKey, encodedData.toHex()]);
+    const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+    await new Promise(async resolve => {
+      await sudoTx.signAndSend(SUDO, ({ status }) => {
+        if (status.isInBlock || status.isFinalized) {
+          console.log(`Transaction included in block with status: ${status.type}`);
+          resolve(null);
+        }
+      });
+    });
+    await waitBlocks(api, 2);
+
+    // Contract votes
+    let foundEvent = false;
+
+    const { gasRequired } = await contract.query.vote(SUDO.address, maxWeight2(api),
+      courtID,
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    );
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .vote(createGas(api, gasRequired),
+          courtID,
+          '0x0000000000000000000000000000000000000000000000000000000000000000'
+        )
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'court' && method === 'JurorVoted') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
   });
 
   // TODO: how do we get a court ID?
@@ -236,3 +296,10 @@ describe.only('zrml-court Runtime Calls', function () {
   /// NOTE: setInflation cannot be called without SUDO, so it will never be called by this library
   it.skip('Should set court inflation', async function () { });
 });
+
+type CourtInfo = {
+  status: { open?: any, closed?: any, reassigned?: any },
+  appeals: any[],
+  roundEnds: { preVote: number, vote: number, aggregation: number, appeal: number },
+  voteItemType: 'Outcome' | 'Binary'
+}

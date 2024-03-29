@@ -26,7 +26,7 @@
     "typescript": "^5.3.3"
   },
   "mocha": {
-    "timeout": 120000,
+    "timeout": 180000,
     "watch-files": [
       "dist/test/**/*.js"
     ],

@@ -2,7 +2,6 @@ use ink::primitives::AccountId;
 use sp_runtime::{MultiAddress, Perbill};
 
 pub type Balance = u128;
-pub type Hash = [u8; 32];
 pub type Timestamp = u64;
 pub type BlockNumber = u32;
 
@@ -101,7 +100,7 @@ pub enum CourtCall {
     Vote {
         #[codec(compact)]
         court_id: CourtId,
-        commitment_vote: Hash,
+        commitment_vote: CourtHash,
     },
     /// Denounce a juror during the voting period for which the commitment vote is known.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L784
@@ -111,7 +110,7 @@ pub enum CourtCall {
         court_id: CourtId,
         juror: AccountId, // AccountIdLookupOf<T>
         vote_item: VoteItem,
-        salt: Hash,
+        salt: CourtHash,
     },
     /// Reveal the commitment vote of the caller, who is a selected juror.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L868
@@ -120,7 +119,7 @@ pub enum CourtCall {
         #[codec(compact)]
         court_id: CourtId,
         vote_item: VoteItem,
-        salt: Hash,
+        salt: CourtHash,
     },
     /// Initiate an appeal for a court
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L957

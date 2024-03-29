@@ -294,6 +294,15 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        #[ink(message)]
+        pub fn vote(&mut self, court_id: CourtId, commitment_vote: CourtHash) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::Vote {
+                    court_id, commitment_vote
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
         // TODO:
         /*
 

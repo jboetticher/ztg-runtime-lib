@@ -23,6 +23,7 @@ pub enum OutcomeReport {
 // region: ZEITGEIST COURT
 
 pub type CourtId = u128;
+pub type CourtHash = [u8; 32];
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
