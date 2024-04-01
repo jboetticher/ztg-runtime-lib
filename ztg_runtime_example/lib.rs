@@ -298,59 +298,68 @@ mod ztg_runtime_example {
         pub fn vote(&mut self, court_id: CourtId, commitment_vote: CourtHash) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::Court(CourtCall::Vote {
-                    court_id, commitment_vote
+                    court_id,
+                    commitment_vote,
                 }))
                 .map_err(Into::<Error>::into)
         }
 
-        // TODO:
-        /*
-
-        #[codec(index = 4)]
-        Vote {
-            #[codec(compact)]
+        #[ink(message)]
+        pub fn denounce_vote(
+            &mut self,
             court_id: CourtId,
-            commitment_vote: Hash,
-        },
-        /// Denounce a juror during the voting period for which the commitment vote is known.
-        /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L784
-        #[codec(index = 5)]
-        DenounceVote {
-            #[codec(compact)]
-            court_id: CourtId,
-            juror: AccountId, // AccountIdLookupOf<T>
+            juror: AccountId,
             vote_item: VoteItem,
-            salt: Hash,
-        },
-        /// Reveal the commitment vote of the caller, who is a selected juror.
-        /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L868
-        #[codec(index = 6)]
-        RevealVote {
-            #[codec(compact)]
+            salt: CourtHash,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::DenounceVote {
+                    court_id,
+                    juror: juror.into(),
+                    vote_item,
+                    salt,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn reveal_vote(
+            &mut self,
             court_id: CourtId,
             vote_item: VoteItem,
-            salt: Hash,
-        },
-        /// Initiate an appeal for a court
-        /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L957
-        #[codec(index = 7)]
-        Appeal {
-            #[codec(compact)]
-            court_id: CourtId,
-        },
-        /// Reassign the stakes of the jurors and delegators
-        /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1046
-        #[codec(index = 8)]
-        ReassignCourtStakes {
-            #[codec(compact)]
-            court_id: CourtId,
-        },
-        /// Set the yearly inflation rate of the court system.
-        /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1167
-        #[codec(index = 9)]
-        SetInflation { inflation: Perbill },
+            salt: CourtHash,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::RevealVote {
+                    court_id,
+                    vote_item,
+                    salt,
+                }))
+                .map_err(Into::<Error>::into)
+        }
 
-        */
+        #[ink(message)]
+        pub fn appeal(&mut self, court_id: CourtId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::Appeal { court_id }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn reassign_court_stakes(&mut self, court_id: CourtId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::ReassignCourtStakes {
+                    court_id,
+                }))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn set_inflation(&mut self, inflation: Perbill) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::Court(CourtCall::SetInflation { inflation }))
+                .map_err(Into::<Error>::into)
+        }
 
         // endregion
 

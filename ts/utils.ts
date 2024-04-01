@@ -52,8 +52,25 @@ export function sudo() {
  */
 export async function getAPI() {
   const provider = new WsProvider(ZEITGEIST_WS_ENDPOINT);
-  const api = await ApiPromise.create({ provider });
-  return { provider, api };
+  const api = await ApiPromise.create({
+    provider,
+    types: {
+    VoteItem: {
+      _enum: {
+        Outcome: 'OutcomeReport',
+        Binary: 'bool',
+      },
+    },
+    OutcomeReport: {
+      _enum: {
+        Categorical: 'u16', 
+        Scalar: 'u128'
+      },
+    },
+    // Define other custom types here
+  },
+  });
+return { provider, api };
 }
 
 /**
