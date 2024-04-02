@@ -5,8 +5,8 @@ mod ztg_runtime_example {
     use sp_runtime::Perbill;
     use ztg_runtime_lib::primitives::{AssetIndexType, MarketId, OrderId, *};
     use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, AuthorizedCall, CourtCall, NeoSwapsCall, OrderbookCall, ParimutelCall,
-        PredictionMarketsCall, RuntimeCall, StyxCall, SwapsCall,
+        AssetManagerCall, AuthorizedCall, CourtCall, GlobalDisputesCall, NeoSwapsCall,
+        OrderbookCall, ParimutelCall, PredictionMarketsCall, RuntimeCall, StyxCall, SwapsCall,
     };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -377,6 +377,73 @@ mod ztg_runtime_example {
         pub fn cross(&mut self) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::Styx(StyxCall::Cross))
+                .map_err(Into::<Error>::into)
+        }
+
+        // endregion
+
+        // region: Global Disputes
+
+        #[ink(message)]
+        pub fn add_vote_outcome(
+            &mut self,
+            market_id: MarketId,
+            outcome: OutcomeReport,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::AddVoteOutcome { market_id, outcome },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn purge_outcomes(&mut self, market_id: MarketId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::PurgeOutcomes { market_id },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn reward_outcome_owner(&mut self, market_id: MarketId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::RewardOutcomeOwner { market_id },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn vote_on_outcome(
+            &mut self,
+            market_id: MarketId,
+            outcome: OutcomeReport,
+            amount: Balance,
+        ) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::VoteOnOutcome { market_id, outcome, amount },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn unlock_vote_balance(&mut self, voter: AccountId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::UnlockVoteBalance { voter: voter.into() },
+                ))
+                .map_err(Into::<Error>::into)
+        }
+
+        #[ink(message)]
+        pub fn refund_vote_fees(&mut self, market_id: MarketId) -> Result<()> {
+            self.env()
+                .call_runtime(&RuntimeCall::GlobalDisputes(
+                    GlobalDisputesCall::RefundVoteFees { market_id },
+                ))
                 .map_err(Into::<Error>::into)
         }
 

@@ -117,6 +117,15 @@ export async function deployTestContract(api: ApiPromise) {
 }
 
 /**
+ * Gets the ztg_runtime_example of an existing smart contract.
+ * @returns A contract instance
+ */
+export function getTestContract(api: ApiPromise, address: string) {
+  const metadata = fs.readFileSync(EXAMPLE_CONTRACT_META, { encoding: 'utf-8' });
+  return new ContractPromise(api, metadata, address);
+}
+
+/**
  * Sets an account to SUDO, assuming current sudo is still Charlie.
  * @param newSudoAccount The AccountId to set as SUDO.
  */

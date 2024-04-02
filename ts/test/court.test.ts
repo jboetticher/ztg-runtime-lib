@@ -1,14 +1,15 @@
 import { expect } from 'chai';
-import { createGas, deployTestContract, generateRandomAddress, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
+import { createGas, deployTestContract, generateRandomAddress, getAPI, getTestContract, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
 import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
-import { addressEq, cryptoWaitReady } from '@polkadot/util-crypto';
+import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { CreateMarketParams, MetadataStorage, RpcContext, Sdk, ZTG, create, createStorage } from "@zeitgeistpm/sdk";
 import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { randomAsHex, blake2AsHex } from '@polkadot/util-crypto';
 import type { AccountId } from '@polkadot/types/interfaces';
+import { WeightV2, Weight } from '@polkadot/types/interfaces/runtime/types';
 
 describe.only('zrml-court Runtime Calls', function () {
   let api: ApiPromise;
@@ -106,7 +107,7 @@ describe.only('zrml-court Runtime Calls', function () {
     return (await api.query.court.marketIdToCourtId(marketID)).unwrap().toString();
   }
 
-  async function contractJoinCourt(JUROR_STAKE: bigint) {
+  async function contractJoinCourt(contract: ContractPromise, JUROR_STAKE: bigint) {
     let foundEvent = false;
     const SUDO = sudo();
 
@@ -129,8 +130,8 @@ describe.only('zrml-court Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   }
 
-  async function createCourtAndContractVotes(SUDO: KeyringPair, commitmentVoteHash: string) {
-    await contractJoinCourt(100000000000000000000000000n);
+  async function createCourtAndContractVotes(contract: ContractPromise, SUDO: KeyringPair, commitmentVoteHash: string) {
+    await contractJoinCourt(contract, 100000000000000000000000000n);
 
     // This test will only pass if the contract is the only court member
     // This guarantees that the contract is chosen
@@ -149,7 +150,6 @@ describe.only('zrml-court Runtime Calls', function () {
     await new Promise(async (resolve) => {
       await sudoTx.signAndSend(SUDO, ({ status }) => {
         if (status.isInBlock || status.isFinalized) {
-          console.log(`Transaction included in block with status: ${status.type}`);
           resolve(null);
         }
       });
@@ -202,7 +202,7 @@ describe.only('zrml-court Runtime Calls', function () {
     const JUROR_STAKE = 5_000_000_000_000n;
 
     // Initiates pool join (contract should already be funded)
-    await contractJoinCourt(JUROR_STAKE);
+    await contractJoinCourt(contract, JUROR_STAKE);
   });
 
   it('Should delegate', async function () {
@@ -241,13 +241,105 @@ describe.only('zrml-court Runtime Calls', function () {
     await api.tx.court.prepareExitCourt().signAndSend(eveAccount);
   });
 
+  it('Should prepare to exit court', async function () {
+    let foundEvent = false;
+    const SUDO = sudo();
+
+    // Use new contract so as not to mess up pool
+    const exitCourtContract = await deployTestContract(api);
+
+    // Gives the contract a lot of DEV
+    const transfer = api.tx.balances.transfer(exitCourtContract.address, "500000000000000000000000000");
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
+
+    // Join court if it hasn't already
+    const JUROR_STAKE = 5_000_000_000_000n;
+    await contractJoinCourt(exitCourtContract, JUROR_STAKE);
+    await waitBlocks(api, 2);
+
+    // Prepare an exit from court
+    const { gasRequired } = await exitCourtContract.query.prepareExitCourt(SUDO.address, maxWeight2(api));
+    await new Promise(async (resolve, _) => {
+      await exitCourtContract.tx
+        .prepareExitCourt(createGas(api, gasRequired))
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'court' && method === 'ExitPrepared') foundEvent = true;
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+  });
+
+  // NOTE: impossible to test without fast-forwarding the node 21k+ blocks, and the period is hard
+  // coded so there is no way to change this within config settings. 
+  // Using Chopsticks is a strategy, but its "dev_newBlock" WebSocket command would take ~10 hours to
+  // generate enough blocks
+  // Can remove the "skip" command if you are running a version with a parameters.rs that includes:
+  // pub const InflationPeriod: BlockNumber = 1;
+  it.skip('Should exit court', async function () {
+    const SUDO = sudo();
+
+    // Use new contract so as not to mess up pool
+    const exitCourtContract = await deployTestContract(api);
+
+    // Gives the contract a lot of DEV
+    const transfer = api.tx.balances.transfer(exitCourtContract.address, "500000000000000000000000000");
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
+
+    // Join court if it hasn't already
+    const JUROR_STAKE = 5_000_000_000_000n;
+    await contractJoinCourt(exitCourtContract, JUROR_STAKE);
+    await waitBlocks(api, 2);
+
+    // Prepare an exit from court
+    {
+      const { gasRequired } = await exitCourtContract.query.prepareExitCourt(SUDO.address, maxWeight2(api));
+      await new Promise(async (resolve, _) => {
+        await exitCourtContract.tx
+          .prepareExitCourt(createGas(api, gasRequired))
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+    }
+
+    // TODO: need to somehow change block number if InflationPeriod != 1
+
+    // Exit from court
+    let foundEvent = false;
+    await waitBlocks(api, 2);
+    {
+      const { gasRequired } = await exitCourtContract.query.exitCourt(SUDO.address, maxWeight2(api), exitCourtContract.address);
+      await new Promise(async (resolve, _) => {
+        await exitCourtContract.tx
+          .exitCourt(createGas(api, gasRequired), exitCourtContract.address)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'court' && method === 'ExitPrepared') foundEvent = true;
+              });
+              resolve(null);
+            }
+          });
+      });
+    }
+    expect(foundEvent).to.be.true;
+  });
+
   it('Should vote', async function () {
     const SUDO = sudo();
-    await createCourtAndContractVotes(SUDO, '0x0000000000000000000000000000000000000000000000000000000000000000');
+    await createCourtAndContractVotes(contract, SUDO, '0x0000000000000000000000000000000000000000000000000000000000000000');
   });
 
   // create new contract & have that contract denounce the vote
-  it.only('Should denounce a vote', async function () {
+  it('Should denounce a vote', async function () {
 
     // Creates vote data
     const SUDO = sudo();
@@ -258,7 +350,7 @@ describe.only('zrml-court Runtime Calls', function () {
     const voteCommitment = createVoteCommitment(contract.address, voteItem, voteSalt);
 
     // Creates court with real vote
-    const courtID = await createCourtAndContractVotes(SUDO, voteCommitment);
+    const courtID = await createCourtAndContractVotes(contract, SUDO, voteCommitment);
 
     // Create new contract & give it DEV
     const denouncingContract = await deployTestContract(api);
@@ -300,7 +392,7 @@ describe.only('zrml-court Runtime Calls', function () {
     const voteCommitment = createVoteCommitment(contract.address, voteItem, voteSalt);
 
     // Creates court with real vote
-    const courtID = await createCourtAndContractVotes(SUDO, voteCommitment);
+    const courtID = await createCourtAndContractVotes(contract, SUDO, voteCommitment);
 
     // Sudo sets vote phase to ending in past
     {
@@ -313,7 +405,6 @@ describe.only('zrml-court Runtime Calls', function () {
       await new Promise(async (resolve) => {
         await sudoTx.signAndSend(SUDO, ({ status }) => {
           if (status.isInBlock || status.isFinalized) {
-            console.log(`Transaction included in block with status: ${status.type}`);
             resolve(null);
           }
         });
@@ -350,69 +441,114 @@ describe.only('zrml-court Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  // TODO:
-  it.skip('Should appeal a court decision', async function () { });
+  it('Should appeal a court decision', async function () {
+    // Creates vote data
+    const SUDO = sudo();
+    const voteItem = { Outcome: { Categorical: 0 } };
+    const voteSalt = randomAsHex(32);
 
-  // TODO: how do we get a court ID?
-  it.skip('Should appeal', async function () { });
+    // Encode the vote item using the appropriate type from your runtime
+    const voteCommitment = createVoteCommitment(contract.address, voteItem, voteSalt);
+
+    // Creates court with real vote
+    const courtID = await createCourtAndContractVotes(contract, SUDO, voteCommitment);
+
+    // Sudo sets vote phase to ending in past
+    {
+      const courtInfoJSON: CourtInfo = (await api.query.court.courts(courtID)).toJSON() as CourtInfo;
+      const courtInfoKey = api.query.court.courts.key(courtID);
+      courtInfoJSON.roundEnds.vote = 2;
+      const encodedData = api.createType('ZrmlCourtCourtInfo', courtInfoJSON);
+      const keyValue = api.createType('(StorageKey, StorageData)', [courtInfoKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+      await new Promise(async (resolve) => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => {
+          if (status.isInBlock || status.isFinalized) {
+            resolve(null);
+          }
+        });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Contract reveals the vote
+    {
+      const { gasRequired } = await contract.query.revealVote(SUDO.address, maxWeight2(api),
+        courtID,
+        voteItem,
+        voteSalt
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .revealVote(createGas(api, gasRequired),
+            courtID,
+            voteItem,
+            voteSalt
+          )
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Sudo sets aggregation phase to ending in past
+    {
+      const courtInfoJSON: CourtInfo = (await api.query.court.courts(courtID)).toJSON() as CourtInfo;
+      const courtInfoKey = api.query.court.courts.key(courtID);
+      courtInfoJSON.roundEnds.aggregation = 3;
+      const encodedData = api.createType('ZrmlCourtCourtInfo', courtInfoJSON);
+      const keyValue = api.createType('(StorageKey, StorageData)', [courtInfoKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+      await new Promise(async (resolve) => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => {
+          if (status.isInBlock || status.isFinalized) {
+            resolve(null);
+          }
+        });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Create new contract to appeal with
+    const appealContract = await deployTestContract(api);
+    const transfer = api.tx.balances.transfer(appealContract.address, "500000000000000000000000000");
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
+
+    // Appeal
+    {
+      let foundEvent = false;
+      await new Promise(async (resolve, _) => {
+        await appealContract.tx
+          .appeal(
+            {
+              gasLimit: api.registry.createType('WeightV2', { refTime: "110000000000", proofSize: "2500000" }) as WeightV2,
+              storageDepositLimit: null
+            },
+            courtID
+          )
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'court' && method === 'CourtAppealed') {
+                  foundEvent = true;
+                }
+              });
+              resolve(null);
+            }
+          });
+      });
+
+      expect(foundEvent).to.be.true;
+    }
+  });
 
   // TODO:
   it.skip('Should resassign court stakes', async function () { })
 
   /// NOTE: setInflation cannot be called without SUDO, so it will never be called by this library
   it.skip('Should set court inflation', async function () { });
-
-
-  // NOTE: putting prepare to exit court & exit court last
-  it('Should prepare to exit court', async function () {
-    let foundEvent = false;
-    const SUDO = sudo();
-
-    // Have the contract delegate to Eve (contract should already be funded)
-    const { gasRequired } = await contract.query.prepareExitCourt(SUDO.address, maxWeight2(api));
-    await new Promise(async (resolve, _) => {
-      await contract.tx
-        .prepareExitCourt(createGas(api, gasRequired))
-        .signAndSend(sudo(), async (res) => {
-          if (res.status.isInBlock) {
-            res.events.forEach(({ event: { data, method, section } }) => {
-              if (section === 'court' && method === 'ExitPrepared') foundEvent = true;
-            });
-            resolve(null);
-          }
-        });
-    });
-
-    expect(foundEvent).to.be.true;
-  });
-
-  // NOTE: impossible to test without fast-forwarding the node 21k+ blocks, and the period is hard
-  // coded so there is no way to change this within config settings.
-  // TODO: use the chain state to add a delegate that's already ready to be removed
-  it.skip('Should exit court', async function () {
-    let foundEvent = false;
-    const SUDO = sudo();
-
-    // TODO: join court if it hasn't already
-
-    // Have the contract prepare to exit the court (contract should already be funded)
-    const { gasRequired } = await contract.query.prepareExitCourt(SUDO.address, maxWeight2(api));
-    await new Promise(async (resolve, _) => {
-      await contract.tx
-        .prepareExitCourt(createGas(api, gasRequired))
-        .signAndSend(sudo(), async (res) => {
-          if (res.status.isInBlock) {
-            res.events.forEach(({ event: { data, method, section } }) => {
-              console.log(method, section, data.toHuman());
-              if (section === 'court' && method === 'ExitPrepared') foundEvent = true;
-            });
-            resolve(null);
-          }
-        });
-    });
-
-    expect(foundEvent).to.be.true;
-  });
 });
 
 type CourtInfo = {

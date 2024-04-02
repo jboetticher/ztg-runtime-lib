@@ -92,7 +92,7 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L660C16-L660C26
     #[codec(index = 3)]
     ExitCourt {
-        court_participant: MultiAddress<AccountId, u64>, // TODO: see if replacing with account ID lookup is necessary
+        court_participant: MultiAddress<AccountId, u64>,
     },
     /// Vote as a randomly selected juror for a specific court case.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L717
@@ -108,7 +108,7 @@ pub enum CourtCall {
     DenounceVote {
         #[codec(compact)]
         court_id: CourtId,
-        juror: MultiAddress<AccountId, u64>, // TODO: see if replacing with account ID lookup is necessary
+        juror: MultiAddress<AccountId, u64>,
         vote_item: VoteItem,
         salt: CourtHash,
     },
@@ -494,7 +494,7 @@ pub enum GlobalDisputesCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L611
     #[codec(index = 4)]
     UnlockVoteBalance {
-        voter: AccountId // TODO: see if its the same as AccountIdLookupOf<T>, or if MultiAddress can be used
+        voter: MultiAddress<AccountId, u64> 
     }
 }
 

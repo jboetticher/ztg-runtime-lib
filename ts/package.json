@@ -3,7 +3,8 @@
   "target": "es2022",
   "scripts": {
     "start": "node --loader ts-node/esm index.ts",
-    "test": "tsc && mocha 'dist/test/**/*.test.js'"
+    "test": "tsc && mocha 'dist/test/**/*.test.js'",
+    "spec": "tsc && mkdir -p spec && node dist/generateSpec.js"
   },
   "type": "module",
   "author": "",
@@ -26,7 +27,7 @@
     "typescript": "^5.3.3"
   },
   "mocha": {
-    "timeout": 180000,
+    "timeout": 300000,
     "watch-files": [
       "dist/test/**/*.js"
     ],
