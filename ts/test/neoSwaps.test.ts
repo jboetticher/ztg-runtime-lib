@@ -131,11 +131,70 @@ describe.only('zrml-neo-swaps Runtime Calls', function () {
     }
   }
 
-  // TODO
-  it.skip('Should buy from a pool', async function () { });
+  it('Should buy from a pool', async function () {
+    const SUDO = sudo();
+    const marketId = await createCategoricalMarketWithPool(SUDO, api);
 
-  // TODO
-  it.skip('Should be able to sell to a pool', async function () { });
+    // Contract buys from market
+    let foundEvent = false;
+    const parameters = [marketId, 2, { CategoricalOutcome: [marketId, 1] }, "10000000000", "100000000"];
+    const { gasRequired } = await contract.query.neoswapBuy(SUDO.address, maxWeight2(api), ...parameters);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .neoswapBuy(createGas(api, gasRequired), ...parameters)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'neoSwaps' && method === 'BuyExecuted') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+  });
+
+  it('Should be able to sell to a pool', async function () {
+    const SUDO = sudo();
+    const marketId = await createCategoricalMarketWithPool(SUDO, api);
+
+    // Contract first buys from market
+    {
+      const parameters = [marketId, 2, { CategoricalOutcome: [marketId, 1] }, "10000000000", "100000000"];
+      const { gasRequired } = await contract.query.neoswapBuy(SUDO.address, maxWeight2(api), ...parameters);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapBuy(createGas(api, gasRequired), ...parameters)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+    }
+
+    // Then sells it back
+    let foundEvent = false;
+    const parameters = [marketId, 2, { CategoricalOutcome: [marketId, 1] }, "1000000000", "10000000"];
+    const { gasRequired } = await contract.query.neoswapSell(SUDO.address, maxWeight2(api), ...parameters);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .neoswapSell(createGas(api, gasRequired), ...parameters)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'neoSwaps' && method === 'SellExecuted') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
+  });
 
   it('Should join a pool', async function () {
     // Create Market
@@ -183,8 +242,65 @@ describe.only('zrml-neo-swaps Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  // TODO
-  it.skip('Should exit a pool', async function () { });
+  it('Should exit a pool', async function () {
+    const SUDO = sudo();
+    const marketId = await createCategoricalMarketWithPool(SUDO, api);
+
+    const setToBuy = "600000000000";
+    const maxAmountsIn = "100000000000000";
+    const sharesToBuy = "500000000000";
+    const minAmountsOut = "10000000000";
+
+    // Smart contract purchases market set
+    {
+      const { gasRequired } = await contract.query.buyCompleteSet(
+        SUDO.address, maxWeight2(api), marketId, setToBuy
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .buyCompleteSet(createGas(api, gasRequired), marketId, setToBuy)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Contract joins market
+    {
+      const parameters = [marketId, sharesToBuy, [maxAmountsIn, maxAmountsIn]];
+      const { gasRequired } = await contract.query.neoswapJoin(SUDO.address, maxWeight2(api), ...parameters);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapJoin(createGas(api, gasRequired), ...parameters)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+    }
+
+    // Contract exits market
+    {
+      let foundEvent = false;
+      const parameters = [marketId, sharesToBuy, [minAmountsOut, minAmountsOut]];
+      const { gasRequired } = await contract.query.neoswapExit(SUDO.address, maxWeight2(api), ...parameters);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapExit(createGas(api, gasRequired), ...parameters)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'neoSwaps' && method === 'ExitExecuted') {
+                  foundEvent = true;
+                }
+              });
+              resolve(null);
+            }
+          });
+      });
+      expect(foundEvent).to.be.true;
+    }
+  });
 
   // TODO
   it.skip('Should withdraw fees from a pool', async function () { });
