@@ -551,7 +551,7 @@ pub enum NeoSwapsCall {
         min_amounts_out: ink::prelude::vec::Vec<Balance>,
     },
     /// Withdraw swap fees from the specified market.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L450
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L478
     #[codec(index = 4)]
     WithdrawFees {
         #[codec(compact)]

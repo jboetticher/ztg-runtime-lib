@@ -83,54 +83,6 @@ describe.only('zrml-neo-swaps Runtime Calls', function () {
     return parseInt(marketID.toString());
   }
 
-  async function getNeoswapPool(marketId: string) {
-    const res = await zeitgeistSDK.api.query.neoSwaps.pools(marketId);
-    const unwrappedRes = res.unwrapOr(null);
-
-    if (unwrappedRes) {
-      const reserves: ReserveMap = new Map();
-      const assetIds: MarketOutcomeAssetId[] = [];
-
-      unwrappedRes.reserves.forEach((reserve, asset) => {
-        const assetId = parseAssetIdString(asset.toString());
-        if (IOMarketOutcomeAssetId.is(assetId)) {
-          reserves.set(
-            IOCategoricalAssetId.is(assetId)
-              ? assetId.CategoricalOutcome[1]
-              : assetId.ScalarOutcome[1],
-            new Decimal(reserve.toString()),
-          );
-          assetIds.push(assetId);
-        }
-      });
-
-      const poolAccounts: PoolAccount[] =
-        unwrappedRes.liquiditySharesManager.nodes.map((node) => {
-          return {
-            address: node.account.toString(),
-            shares: new Decimal(node.stake.toString()),
-            fees: new Decimal(node.fees.toString()),
-          };
-        });
-
-      const pool: Amm2Pool = {
-        accountId: unwrappedRes.accountId.toString(),
-        baseAsset: parseAssetIdString(unwrappedRes.collateral.toString())!,
-        liquidity: new Decimal(unwrappedRes.liquidityParameter.toString()),
-        swapFee: new Decimal(unwrappedRes.swapFee.toString()),
-        accounts: poolAccounts,
-        reserves,
-        assetIds,
-        totalShares: poolAccounts.reduce<Decimal>(
-          (total, account) => total.plus(account.shares),
-          new Decimal(0),
-        ),
-      };
-
-      return pool;
-    }
-  }
-
   it('Should buy from a pool', async function () {
     const SUDO = sudo();
     const marketId = await createCategoricalMarketWithPool(SUDO, api);
@@ -302,60 +254,197 @@ describe.only('zrml-neo-swaps Runtime Calls', function () {
     }
   });
 
-  // TODO
-  it.skip('Should withdraw fees from a pool', async function () { });
+  it('Should withdraw fees from a pool', async function () {
+    const SUDO = sudo();
+    const marketId = await createCategoricalMarketWithPool(SUDO, api);
 
-  // TODO
-  it.skip('Should deploy a pool', async function () { });
+    const setToBuy = "600000000000";
+    const maxAmountsIn = "100000000000000";
+    const sharesToBuy = "500000000000";
+
+    // Smart contract purchases market set
+    {
+      const { gasRequired } = await contract.query.buyCompleteSet(
+        SUDO.address, maxWeight2(api), marketId, setToBuy
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .buyCompleteSet(createGas(api, gasRequired), marketId, setToBuy)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Contract joins market
+    {
+      const parameters = [marketId, sharesToBuy, [maxAmountsIn, maxAmountsIn]];
+      const { gasRequired } = await contract.query.neoswapJoin(SUDO.address, maxWeight2(api), ...parameters);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapJoin(createGas(api, gasRequired), ...parameters)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+    }
+
+    // Withdraws fees (0) now that it has joined the market
+    {
+      let foundEvent = false;
+      const { gasRequired } = await contract.query.neoswapWithdrawFees(SUDO.address, maxWeight2(api), marketId);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapWithdrawFees(createGas(api, gasRequired), marketId)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'neoSwaps' && method === 'FeesWithdrawn') foundEvent = true;
+              });
+              resolve(null);
+            }
+          });
+      });
+      expect(foundEvent).to.be.true;
+    }
+  });
+
+  it.only('Should deploy a pool', async function () {
+    const SUDO = sudo();
+
+    // Create market
+    let marketId = '';
+    {
+      const creationParams = [
+        { Ztg: {} },
+        0,
+        SUDO.address,
+        { Timestamp: [Date.now(), Date.now() + 100_000_000] },
+        {
+          disputeDuration: 5000,
+          gracePeriod: 0,
+          oracleDuration: 500,
+        },
+        (() => {
+          const arr = new Uint8Array(50).fill(0);
+          arr[0] = 0x15;
+          arr[1] = 0x30;
+          return { Sha3_384: arr.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '0x') };
+        })(),
+        { Permissionless: {} },
+        { Categorical: 2 },
+        { Court: {} },
+        'Lmsr'
+      ];
+      const { gasRequired } = await contract.query.createMarket(SUDO.address, maxWeight2(api), ...creationParams);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .createMarket(createGas(api, gasRequired), ...creationParams)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'predictionMarkets' && method === 'MarketCreated') {
+                  marketId = (data.toJSON() as any)[0];
+                }
+              });
+              resolve(null);
+            }
+          });
+      });
+    }
+
+    // Contract buys complete set
+    {
+      const { gasRequired } = await contract.query.buyCompleteSet(
+        SUDO.address, maxWeight2(api), marketId, "3000000000000"
+      );
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .buyCompleteSet(createGas(api, gasRequired), marketId, "3000000000000")
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) resolve(null);
+          });
+      });
+    }
+
+    // Deploys the pool
+    {
+      let foundEvent = false;
+      const params = [
+        marketId,
+        ZTG.mul(300).toString(),
+        [
+          new Decimal(0.5).mul(ZTG).toString(),
+          new Decimal(0.5).mul(ZTG).toString()
+        ],
+        "10000000"
+      ];
+      const { gasRequired } = await contract.query.neoswapDeployPool(SUDO.address, maxWeight2(api), ...params);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .neoswapDeployPool(createGas(api, gasRequired), ...params)
+          .signAndSend(sudo(), async (res) => {
+            if (res.status.isInBlock) {
+              res.events.forEach(({ event: { data, method, section } }) => {
+                if (section === 'neoSwaps' && method === 'PoolDeployed') foundEvent = true;
+              });
+              resolve(null);
+            }
+          });
+      });
+      expect(foundEvent).to.be.true;
+    }
+  });
+
+  async function getNeoswapPool(marketId: string) {
+    const res = await zeitgeistSDK.api.query.neoSwaps.pools(marketId);
+    const unwrappedRes = res.unwrapOr(null);
+
+    if (unwrappedRes) {
+      const reserves: ReserveMap = new Map();
+      const assetIds: MarketOutcomeAssetId[] = [];
+
+      unwrappedRes.reserves.forEach((reserve, asset) => {
+        const assetId = parseAssetIdString(asset.toString());
+        if (IOMarketOutcomeAssetId.is(assetId)) {
+          reserves.set(
+            IOCategoricalAssetId.is(assetId)
+              ? assetId.CategoricalOutcome[1]
+              : assetId.ScalarOutcome[1],
+            new Decimal(reserve.toString()),
+          );
+          assetIds.push(assetId);
+        }
+      });
+
+      const poolAccounts: PoolAccount[] =
+        unwrappedRes.liquiditySharesManager.nodes.map((node) => {
+          return {
+            address: node.account.toString(),
+            shares: new Decimal(node.stake.toString()),
+            fees: new Decimal(node.fees.toString()),
+          };
+        });
+
+      const pool: Amm2Pool = {
+        accountId: unwrappedRes.accountId.toString(),
+        baseAsset: parseAssetIdString(unwrappedRes.collateral.toString())!,
+        liquidity: new Decimal(unwrappedRes.liquidityParameter.toString()),
+        swapFee: new Decimal(unwrappedRes.swapFee.toString()),
+        accounts: poolAccounts,
+        reserves,
+        assetIds,
+        totalShares: poolAccounts.reduce<Decimal>(
+          (total, account) => total.plus(account.shares),
+          new Decimal(0),
+        ),
+      };
+
+      return pool;
+    }
+  }
 });
-
-// From: https://github.com/zeitgeistpm/ui/blob/staging/lib/math.ts
-const calcOutGivenIn = (
-  tokenBalanceIn: Decimal | string | number, // amount of 'in' asset in the pool
-  tokenWeightIn: Decimal | string | number, // weight of 'in' asset on the pool
-  tokenBalanceOut: Decimal | string | number, // amount of 'out' asset in the pool
-  tokenWeightOut: Decimal | string | number, // weight of 'out' asset on the pool
-  tokenAmountIn: Decimal | string | number, // amount in for the swap
-  swapFee: Decimal | string | number, // 0.01 is 1%
-  creatorFee: Decimal | string | number, // 0.01 is 1%
-) => {
-  const totalFee = new Decimal(swapFee).plus(creatorFee);
-  const weightRatio = new Decimal(tokenWeightIn).div(
-    new Decimal(tokenWeightOut),
-  );
-  const adjustedIn = new Decimal(tokenAmountIn).times(
-    new Decimal(1).minus(new Decimal(totalFee)),
-  );
-  const y = new Decimal(tokenBalanceIn).div(
-    new Decimal(tokenBalanceIn).plus(adjustedIn),
-  );
-  const foo = y.pow(weightRatio);
-  const bar = new Decimal(1).minus(foo);
-  const tokenAmountOut = new Decimal(tokenBalanceOut).times(bar);
-  return tokenAmountOut;
-};
-
-const calcInGivenOut = (
-  tokenBalanceIn: Decimal | string | number,
-  tokenWeightIn: Decimal | string | number,
-  tokenBalanceOut: Decimal | string | number,
-  tokenWeightOut: Decimal | string | number,
-  tokenAmountOut: Decimal | string | number,
-  swapFee: Decimal | string | number, // 0.01 is 1%
-  creatorFee: Decimal | string | number, // 0.01 is 1%
-) => {
-  const totalFee = new Decimal(swapFee).plus(creatorFee);
-  const weightRatio = new Decimal(tokenWeightOut).div(
-    new Decimal(tokenWeightIn),
-  );
-  const diff = new Decimal(tokenBalanceOut).minus(tokenAmountOut);
-  const y = new Decimal(tokenBalanceOut).div(diff);
-  const foo = y.pow(weightRatio).minus(new Decimal(1));
-  const tokenAmountIn = new Decimal(tokenBalanceIn)
-    .times(foo)
-    .div(new Decimal(1).minus(new Decimal(totalFee)));
-  return tokenAmountIn;
-};
 
 type ReserveMap = Map<number | "Long" | "Short", Decimal>;
 
