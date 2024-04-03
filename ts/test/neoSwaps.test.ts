@@ -13,7 +13,7 @@ import {
   AssetId, parseAssetId
 } from "@zeitgeistpm/sdk";
 
-describe.only('zrml-neo-swaps Runtime Calls', function () {
+describe('zrml-neo-swaps Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;
@@ -310,7 +310,7 @@ describe.only('zrml-neo-swaps Runtime Calls', function () {
     }
   });
 
-  it.only('Should deploy a pool', async function () {
+  it('Should deploy a pool', async function () {
     const SUDO = sudo();
 
     // Create market

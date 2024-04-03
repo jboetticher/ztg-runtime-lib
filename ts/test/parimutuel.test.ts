@@ -7,9 +7,8 @@ import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { CreateMarketParams, MetadataStorage, RpcContext, Sdk, ZTG, create, createStorage } from "@zeitgeistpm/sdk";
 import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
-import { Decimal } from 'decimal.js'
 
-describe('zrml-prediction-markets Runtime Calls', function () {
+describe('zrml-parimutuel Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;

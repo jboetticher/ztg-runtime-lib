@@ -32,9 +32,9 @@ AssetManager            COMPLETE
 Authorized              COMPLETE BAR SUDO
 Court                   IN PROGRESS                 BAR SUDO & EXIT
 Swaps                   IN PROGRESS
-PredictionMarkets       IN PROGRESS
+PredictionMarkets       COMPLETE BAR SUDO
 Styx                    COMPLETE BAR SUDO
 GlobalDisputes          TODO
-NeoSwaps                IN PROGRESS
+NeoSwaps                COMPLETE
 Orderbook               COMPLETE
 Parimutuel              COMPLETE

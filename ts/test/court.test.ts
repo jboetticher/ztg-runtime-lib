@@ -149,9 +149,7 @@ describe('zrml-court Runtime Calls', function () {
     const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
     await new Promise(async (resolve) => {
       await sudoTx.signAndSend(SUDO, ({ status }) => {
-        if (status.isInBlock || status.isFinalized) {
-          resolve(null);
-        }
+        if (status.isInBlock || status.isFinalized) resolve(null);
       });
     });
     await waitBlocks(api, 2);
@@ -551,7 +549,7 @@ describe('zrml-court Runtime Calls', function () {
   it.skip('Should set court inflation', async function () { });
 });
 
-type CourtInfo = {
+export type CourtInfo = {
   status: { open?: any, closed?: any, reassigned?: any },
   appeals: any[],
   roundEnds: { preVote: number, vote: number, aggregation: number, appeal: number },

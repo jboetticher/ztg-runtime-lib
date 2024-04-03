@@ -22,6 +22,6 @@ describe('zrml-authorized Runtime Calls', function () {
     process.kill('SIGTERM');
   });
 
-  // NOTE: can only be called with the sudo.sudo() extrinsic
+  // @note: authorize_market_outcome can only be called as SUDO or Advisory Committee
   it.skip('Should authorize a market outcome', async function() {});
 });
