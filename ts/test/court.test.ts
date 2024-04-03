@@ -11,7 +11,7 @@ import { randomAsHex, blake2AsHex } from '@polkadot/util-crypto';
 import type { AccountId } from '@polkadot/types/interfaces';
 import { WeightV2, Weight } from '@polkadot/types/interfaces/runtime/types';
 
-describe.only('zrml-court Runtime Calls', function () {
+describe('zrml-court Runtime Calls', function () {
   let api: ApiPromise;
   let contract: ContractPromise;
   let process: ChildProcess;
