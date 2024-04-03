@@ -369,7 +369,7 @@ describe('zrml-prediction-markets Runtime Calls', function () {
   });
 
   // create market -> sudo admin market close -> sudo report -> sudo dispute -> global dispute
-  it.only('Should be able to start a global dispute', async function () {
+  it('Should be able to start a global dispute', async function () {
     // Creates a market with Court dispute
     const SUDO = sudo();
     const marketID = await createCategoricalMarket(SUDO, api, SUDO.address.toString(), "Court");

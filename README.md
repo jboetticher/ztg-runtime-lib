@@ -34,7 +34,7 @@ Court                   IN PROGRESS                 BAR SUDO & EXIT
 Swaps                   IN PROGRESS
 PredictionMarkets       COMPLETE BAR SUDO
 Styx                    COMPLETE BAR SUDO
-GlobalDisputes          TODO
+GlobalDisputes          IN PROGRESS
 NeoSwaps                COMPLETE
 Orderbook               COMPLETE
 Parimutuel              COMPLETE
