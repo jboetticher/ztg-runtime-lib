@@ -132,7 +132,6 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1046
     #[codec(index = 8)]
     ReassignCourtStakes {
-        #[codec(compact)]
         court_id: CourtId,
     },
     /// Set the yearly inflation rate of the court system.

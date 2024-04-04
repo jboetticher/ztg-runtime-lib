@@ -9,7 +9,7 @@ import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { CourtInfo } from './court.test.js';
 
-describe.only('zrml-global-disputes Runtime Calls', function () {
+describe('zrml-global-disputes Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;

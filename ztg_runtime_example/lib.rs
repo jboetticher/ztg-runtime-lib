@@ -424,7 +424,11 @@ mod ztg_runtime_example {
         ) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::GlobalDisputes(
-                    GlobalDisputesCall::VoteOnOutcome { market_id, outcome, amount },
+                    GlobalDisputesCall::VoteOnOutcome {
+                        market_id,
+                        outcome,
+                        amount,
+                    },
                 ))
                 .map_err(Into::<Error>::into)
         }
@@ -433,7 +437,9 @@ mod ztg_runtime_example {
         pub fn unlock_vote_balance(&mut self, voter: AccountId) -> Result<()> {
             self.env()
                 .call_runtime(&RuntimeCall::GlobalDisputes(
-                    GlobalDisputesCall::UnlockVoteBalance { voter: voter.into() },
+                    GlobalDisputesCall::UnlockVoteBalance {
+                        voter: voter.into(),
+                    },
                 ))
                 .map_err(Into::<Error>::into)
         }

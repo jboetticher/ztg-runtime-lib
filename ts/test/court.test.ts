@@ -516,6 +516,7 @@ describe('zrml-court Runtime Calls', function () {
 
     // Appeal
     {
+      // NOTE: for some reason, the typical gas estimation doesn't work, so it is manually defined
       let foundEvent = false;
       await new Promise(async (resolve, _) => {
         await appealContract.tx
@@ -542,10 +543,89 @@ describe('zrml-court Runtime Calls', function () {
     }
   });
 
-  // TODO:
-  it.skip('Should resassign court stakes', async function () { })
+  // create court -> votes -> reveals -> sudo closes -> reassign court stakes
+  it.only('Should resassign court stakes', async function () {
+    // Creates vote data
+    const SUDO = sudo();
+    const voteItem = { Outcome: { Categorical: 0 } };
+    const voteSalt = randomAsHex(32);
 
-  /// NOTE: setInflation cannot be called without SUDO, so it will never be called by this library
+    // Encode the vote item using the appropriate type from your runtime
+    const voteCommitment = createVoteCommitment(contract.address, voteItem, voteSalt);
+
+    // Creates court with real vote
+    const courtID = await createCourtAndContractVotes(contract, SUDO, voteCommitment);
+
+    // Sudo sets vote phase to ending in past
+    {
+      const courtInfoJSON: CourtInfo = (await api.query.court.courts(courtID)).toJSON() as CourtInfo;
+      const courtInfoKey = api.query.court.courts.key(courtID);
+      courtInfoJSON.roundEnds.vote = 2;
+      const encodedData = api.createType('ZrmlCourtCourtInfo', courtInfoJSON);
+      const keyValue = api.createType('(StorageKey, StorageData)', [courtInfoKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+      await new Promise(async (resolve) => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => { if (status.isInBlock || status.isFinalized) resolve(null) });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Contract reveals the vote
+    {
+      const params = [courtID, voteItem, voteSalt];
+      const { gasRequired } = await contract.query.revealVote(SUDO.address, maxWeight2(api), ...params);
+      await new Promise(async (resolve, _) => {
+        await contract.tx
+          .revealVote(createGas(api, gasRequired), ...params)
+          .signAndSend(sudo(), async (res) => { if (res.status.isInBlock) resolve(null) });
+      });
+    }
+
+    // Sudo set votes to closed
+    {
+      const courtInfoJSON: CourtInfo = (await api.query.court.courts(courtID)).toJSON() as CourtInfo;
+      const courtInfoKey = api.query.court.courts.key(courtID);
+      courtInfoJSON.status = { closed: {} };
+      const encodedData = api.createType('ZrmlCourtCourtInfo', courtInfoJSON);
+      const keyValue = api.createType('(StorageKey, StorageData)', [courtInfoKey, encodedData.toHex()]);
+      const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+      await new Promise(async (resolve) => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => {
+          if (status.isInBlock || status.isFinalized) {
+            resolve(null);
+          }
+        });
+      });
+      await waitBlocks(api, 2);
+    }
+
+    // Reassigns court stakes
+    // NOTE: for some reason, the typical gas estimation doesn't work, so it is manually defined
+    let foundEvent = false;
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .reassignCourtStakes(
+          { 
+            gasLimit: api.registry.createType('WeightV2', { refTime: "165333787269", proofSize: "2930478" }) as WeightV2,
+            storageDepositLimit: null
+          },
+          courtID
+        )
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'court' && method === 'StakesReassigned') {
+                foundEvent = true;
+              }
+            });
+            resolve(null);
+          }
+        });
+    });
+    expect(foundEvent).to.be.true;
+  });
+
+  // @note: set_inflation cannot be called without SUDO, so it will never be called by this library
   it.skip('Should set court inflation', async function () { });
 });
 
