@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { createGas, deployTestContract, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
+import { createGas, deployTestContract, generateRandomAddress, getAPI, maxWeight2, setSudoKey, startNode, sudo, waitBlocks } from '../utils.js';
 import { ChildProcess } from 'child_process';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
@@ -9,7 +9,7 @@ import { Memory } from "@zeitgeistpm/web3.storage";
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { CourtInfo } from './court.test.js';
 
-describe('zrml-global-disputes Runtime Calls', function () {
+describe.only('zrml-global-disputes Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
   let contract: ContractPromise;
@@ -128,15 +128,10 @@ describe('zrml-global-disputes Runtime Calls', function () {
     return marketID;
   }
 
-  async function createGlobalDisputeInVotePhase() {
-    const marketId = await createGlobalDispute();
-    const SUDO = sudo();
-
-    // Set the global dispute's status for addOutcomeEnd in the past
-    const disputeInfoJSON: ZrmlGlobalDisputesGlobalDisputeInfo =
-      (await api.query.globalDisputes.globalDisputesInfo(marketId)).toJSON() as ZrmlGlobalDisputesGlobalDisputeInfo;
+  async function setDisputeToVotingPhase(marketId: any, SUDO: KeyringPair) {
+    const disputeInfoJSON: ZrmlGlobalDisputesGlobalDisputeInfo = (await api.query.globalDisputes.globalDisputesInfo(marketId)).toJSON() as ZrmlGlobalDisputesGlobalDisputeInfo;
     const disputeInfoKey = api.query.globalDisputes.globalDisputesInfo.key(marketId);
-    disputeInfoJSON.status.active.addOutcomeEnd = 1;
+    disputeInfoJSON.status.active!.addOutcomeEnd = 1;
     const encodedData = api.createType('ZrmlGlobalDisputesGlobalDisputeInfo', disputeInfoJSON);
     const keyValue = api.createType('(StorageKey, StorageData)', [disputeInfoKey, encodedData.toHex()]);
     const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
@@ -146,8 +141,31 @@ describe('zrml-global-disputes Runtime Calls', function () {
       });
     });
     await waitBlocks(api, 2);
+  }
+
+  async function createGlobalDisputeInVotePhase() {
+    const marketId = await createGlobalDispute();
+    const SUDO = sudo();
+
+    // Set the global dispute's status for addOutcomeEnd in the past
+    await setDisputeToVotingPhase(marketId, SUDO);
 
     return marketId;
+  }
+
+  async function finishDispute(marketID: any, SUDO: KeyringPair, destroy: boolean = false) {
+    const disputeInfoJSON: ZrmlGlobalDisputesGlobalDisputeInfo = (await api.query.globalDisputes.globalDisputesInfo(marketID)).toJSON() as ZrmlGlobalDisputesGlobalDisputeInfo;
+    const disputeInfoKey = api.query.globalDisputes.globalDisputesInfo.key(marketID);
+    disputeInfoJSON.status = destroy ? { destroyed: {} } : { finished: {} };
+    const encodedData = api.createType('ZrmlGlobalDisputesGlobalDisputeInfo', disputeInfoJSON);
+    const keyValue = api.createType('(StorageKey, StorageData)', [disputeInfoKey, encodedData.toHex()]);
+    const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+    await new Promise(async (resolve) => {
+      await sudoTx.signAndSend(SUDO, ({ status }) => {
+        if (status.isInBlock || status.isFinalized) resolve(null);
+      });
+    });
+    await waitBlocks(api, 2);
   }
 
   it('Should add a vote outcome', async function () {
@@ -173,18 +191,77 @@ describe('zrml-global-disputes Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   });
 
-  it.skip('Should purge outcomes', async function () {
+  it('Should purge outcomes', async function () {
     const SUDO = sudo();
-    const marketID = await createGlobalDispute();
+    const marketID = await createGlobalDisputeInVotePhase();
 
-    // TODO: create global dispute -> finish dispute -> purge outcome
-    // GlobalDisputesCall::PurgeOutcomes { market_id },
+    // Votes in an outcome
+    const voteTx = await api.tx.globalDisputes.voteOnOutcome(marketID, { Scalar: 1 }, "1000000000000");
+    await voteTx.signAndSend(SUDO);
+    await waitBlocks(api, 2);
 
-    // expect(foundEvent).to.be.true;
+    // SUDO sets dispute to finished
+    await finishDispute(marketID, SUDO);
+
+    // Contract purges outcome
+    let foundEvent = false;
+    const { gasRequired } = await contract.query.purgeOutcomes(SUDO.address, maxWeight2(api), marketID);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .purgeOutcomes(createGas(api, gasRequired), marketID)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'globalDisputes' && method === 'OutcomesFullyCleaned') foundEvent = true;
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
   });
 
-  it.skip('Should reward outcome owners', async function () {
-    // GlobalDisputesCall::RewardOutcomeOwner { market_id },
+  it('Should reward outcome owners', async function () {
+    const SUDO = sudo();
+    const ALICE = new Keyring({ type: 'sr25519' }).addFromUri('//Alice');
+    const marketID = await createGlobalDispute();
+
+    // Alice creates a vote outcome, which adds to reward_account
+    await api.tx.globalDisputes.addVoteOutcome(marketID, { Scalar: 5 }).signAndSend(ALICE);
+    await waitBlocks(api, 2);
+
+    // Sudo sets the status to voting
+    await setDisputeToVotingPhase(marketID, SUDO);
+
+    // Vote for the new vote outcome with a lot of money
+    await api.tx.globalDisputes.voteOnOutcome(marketID, { Scalar: 5 }, "1000000000000000000000000000").signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Sudo sets the status to finished
+    await finishDispute(marketID, SUDO);
+
+    // Purge outcomes
+    await api.tx.globalDisputes.purgeOutcomes(marketID).signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Contract rewards the outcome owner
+    let foundEvent = false;
+    const { gasRequired } = await contract.query.rewardOutcomeOwner(SUDO.address, maxWeight2(api), marketID);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .rewardOutcomeOwner(createGas(api, gasRequired), marketID)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'globalDisputes' && method === 'OutcomeOwnerRewarded') foundEvent = true;
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
   })
 
   it('Should vote on an outcome', async function () {
@@ -211,12 +288,51 @@ describe('zrml-global-disputes Runtime Calls', function () {
     expect(foundEvent).to.be.true;
   })
 
-  it.skip('Should unlock a vote balance', async function () {
-    // GlobalDisputesCall::UnlockVoteBalance { voter: voter.into() }
+  it('Should unlock a vote balance', async function () {
+    const SUDO = sudo();
+
+    const randomAddress = generateRandomAddress();
+
+    // Contract unlocks vote balance
+    const { gasRequired } = await contract.query.unlockVoteBalance(SUDO.address, maxWeight2(api), randomAddress);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .unlockVoteBalance(createGas(api, gasRequired), randomAddress)
+        .signAndSend(sudo(), async (res) => {
+          expect(res.isError).to.be.false;
+          if (res.status.isInBlock && !res.isError) resolve(null);
+        });
+    });
   })
 
-  it.skip('Should refund vote fees', async function () {
-    // GlobalDisputesCall::RefundVoteFees { market_id },
+  it('Should refund vote fees', async function () {
+    const marketID = await createGlobalDisputeInVotePhase();
+    const SUDO = sudo();
+
+    // A user votes
+    await api.tx.globalDisputes.voteOnOutcome(marketID, { Scalar: 1 }, "100000000000000000").signAndSend(SUDO);
+    await waitBlocks(api, 2);
+
+    // Sudo sets market to destroyed
+    await finishDispute(marketID, SUDO, true);
+
+    // Smart contract refunds vote fees
+    let foundEvent = false;
+    const { gasRequired } = await contract.query.refundVoteFees(SUDO.address, maxWeight2(api), marketID);
+    await new Promise(async (resolve, _) => {
+      await contract.tx
+        .refundVoteFees(createGas(api, gasRequired), marketID)
+        .signAndSend(sudo(), async (res) => {
+          if (res.status.isInBlock) {
+            res.events.forEach(({ event: { data, method, section } }) => {
+              if (section === 'globalDisputes' && method === 'OutcomesFullyCleaned') foundEvent = true;
+            });
+            resolve(null);
+          }
+        });
+    });
+
+    expect(foundEvent).to.be.true;
   });
 });
 
@@ -224,9 +340,11 @@ type ZrmlGlobalDisputesGlobalDisputeInfo = {
   winnerOutcome: any,
   outcomeInfo: any,
   status: {
-    active: {
+    active?: {
       addOutcomeEnd: number,
       voteEnd: number
-    }
+    },
+    finished?: {},
+    destroyed?: {}
   }
 }
