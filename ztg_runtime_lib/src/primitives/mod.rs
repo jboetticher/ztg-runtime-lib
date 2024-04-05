@@ -23,6 +23,7 @@ pub enum OutcomeReport {
 // region: ZEITGEIST COURT
 
 pub type CourtId = u128;
+pub type CourtHash = [u8; 32];
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
@@ -107,10 +108,9 @@ pub enum MarketDisputeMechanism {
 #[derive(Clone, Decode, Encode, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum ScoringRule {
-    CPMM,
-    RikiddoSigmoidFeeMarketEma,
     Lmsr,
     Orderbook,
+    Parimutuel
 }
 
 #[derive(scale::Encode, scale::Decode, Clone, PartialEq)]
@@ -122,6 +122,7 @@ pub enum ZeitgeistAsset {
     PoolShare, //(SerdeWrapper<PoolId>),
     Ztg,       // default
     ForeignAsset(u32),
+    ParimutuelShare(u128, u16)
 }
 
 // endregion

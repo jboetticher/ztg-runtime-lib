@@ -1,0 +1,36 @@
+{
+  "name": "ztg-runtime-lib-tests",
+  "target": "es2022",
+  "scripts": {
+    "start": "node --loader ts-node/esm index.ts",
+    "test": "tsc && mocha 'dist/test/**/*.test.js'",
+    "spec": "tsc && mkdir -p spec && node dist/generateSpec.js"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@polkadot/api": "^10.11.2",
+    "@polkadot/api-contract": "^10.11.2",
+    "@polkadot/util-crypto": "^12.6.2",
+    "@zeitgeistpm/sdk": "^3.3.0",
+    "dotenv": "^16.4.5",
+    "esm": "^3.2.25"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.12",
+    "@types/mocha": "^10.0.6",
+    "chai": "^5.1.0",
+    "esbuild-register": "^3.5.0",
+    "mocha": "^10.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "mocha": {
+    "timeout": 300000,
+    "watch-files": [
+      "dist/test/**/*.js"
+    ],
+    "spec": "dist/test/**/*.test.js"
+  }
+}

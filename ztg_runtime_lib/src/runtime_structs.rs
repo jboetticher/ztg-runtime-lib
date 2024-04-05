@@ -2,7 +2,6 @@ use ink::primitives::AccountId;
 use sp_runtime::{MultiAddress, Perbill};
 
 pub type Balance = u128;
-pub type Hash = [u8; 32];
 pub type Timestamp = u64;
 pub type BlockNumber = u32;
 
@@ -93,7 +92,7 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L660C16-L660C26
     #[codec(index = 3)]
     ExitCourt {
-        court_participant: AccountId, // TODO: replace with account ID lookup
+        court_participant: MultiAddress<AccountId, u64>,
     },
     /// Vote as a randomly selected juror for a specific court case.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L717
@@ -101,7 +100,7 @@ pub enum CourtCall {
     Vote {
         #[codec(compact)]
         court_id: CourtId,
-        commitment_vote: Hash,
+        commitment_vote: CourtHash,
     },
     /// Denounce a juror during the voting period for which the commitment vote is known.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L784
@@ -109,9 +108,9 @@ pub enum CourtCall {
     DenounceVote {
         #[codec(compact)]
         court_id: CourtId,
-        juror: AccountId, // AccountIdLookupOf<T>
+        juror: MultiAddress<AccountId, u64>,
         vote_item: VoteItem,
-        salt: Hash,
+        salt: CourtHash,
     },
     /// Reveal the commitment vote of the caller, who is a selected juror.
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L868
@@ -120,7 +119,7 @@ pub enum CourtCall {
         #[codec(compact)]
         court_id: CourtId,
         vote_item: VoteItem,
-        salt: Hash,
+        salt: CourtHash,
     },
     /// Initiate an appeal for a court
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L957
@@ -133,7 +132,6 @@ pub enum CourtCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/court/src/lib.rs#L1046
     #[codec(index = 8)]
     ReassignCourtStakes {
-        #[codec(compact)]
         court_id: CourtId,
     },
     /// Set the yearly inflation rate of the court system.
@@ -443,7 +441,7 @@ pub enum StyxCall {
     #[codec(index = 1)]
     SetBurnAmount {
         #[codec(compact)]
-        market_id: Balance,
+        amount: Balance,
     }
 }
 
@@ -495,7 +493,7 @@ pub enum GlobalDisputesCall {
     /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/global-disputes/src/lib.rs#L611
     #[codec(index = 4)]
     UnlockVoteBalance {
-        voter: AccountId // TODO: see if its the same as AccountIdLookupOf<T>,
+        voter: MultiAddress<AccountId, u64> 
     }
 }
 
@@ -552,7 +550,7 @@ pub enum NeoSwapsCall {
         min_amounts_out: ink::prelude::vec::Vec<Balance>,
     },
     /// Withdraw swap fees from the specified market.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L450
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps/src/lib.rs#L478
     #[codec(index = 4)]
     WithdrawFees {
         #[codec(compact)]
@@ -612,23 +610,23 @@ pub enum OrderbookCall {
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ParimutelCall {
     /// Buy parimutuel shares for the market's base asset.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L203
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/parimutuel/src/lib.rs#L203
     #[codec(index = 0)]
     Buy {
-        asset: ZeitgeistAsset, // TODO: ensure that this is the same as Asset<MarketIdOf<T>>,
+        asset: ZeitgeistAsset,
         #[codec(compact)]
         amount: Balance,
     },
     /// Claim winnings from a resolved market.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L221
+    /// https://github.com/zeitgeistpm/zeitgeist/blob/release-v0.5.0/zrml/parimutuel/src/lib.rs#L221
     #[codec(index = 1)]
     ClaimRewards {
         market_id: MarketId
     },
     /// Refund the base asset of losing categorical outcome assets.  
-    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/orderbook/src/lib.rs#L240
+    /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/parimutuel/src/lib.rs#L240
     #[codec(index = 2)]
     ClaimRefunds {
-        refund_asset: MarketId
+        refund_asset: ZeitgeistAsset
     },
 }
