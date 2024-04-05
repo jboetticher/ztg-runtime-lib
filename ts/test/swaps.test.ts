@@ -9,6 +9,10 @@ import { KeyringPair } from '@polkadot/keyring/types.js';
 import { Memory } from "@zeitgeistpm/web3.storage";
 import { Decimal } from 'decimal.js'
 
+// Creates a pool for market 0
+const ENCODED_STORAGE_KEY = '0x6ff1538f484dbd21e5c578e840f46abe4c72016d74b63ae83d79b02efdb5528e463be1d58a72e9618ea59884367c435800000000000000000000000000000000';
+const ENCODED_STORAGE_DATA = '0x0c0000000000000000000000000000000000000000000000000000000000000000000000000100040000c2eb0b0000000000000000000000000000f2052a01000000000000000000000c0000000000000000000000000000000000000000807c814a00000000000000000000000000000000000000000000000000000000010000807c814a0000000000000000000000040000f902950000000000000000000000';
+
 describe('zrml-swaps Runtime Calls', function () {
   let api: ApiPromise;
   let zeitgeistSDK: Sdk<RpcContext<MetadataStorage>, MetadataStorage>;
@@ -19,7 +23,7 @@ describe('zrml-swaps Runtime Calls', function () {
     // process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
-    contract = await deployTestContract(api);
+    // contract = await deployTestContract(api);
 
     // Initialize Zeitgeist SDK for local
     zeitgeistSDK = await create({
@@ -28,9 +32,9 @@ describe('zrml-swaps Runtime Calls', function () {
     });
 
     // Send cash to contract
-    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000_000n);
-    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
-    await waitBlocks(api, 2);
+    // const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000_000n);
+    // await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    // await waitBlocks(api, 2);
   });
 
   this.afterAll(async function () {
@@ -38,8 +42,7 @@ describe('zrml-swaps Runtime Calls', function () {
     // process.kill('SIGTERM');
   });
 
-  // TODO: no idea how normal swaps are created
-  async function createCategoricalMarketWithPool(signer: KeyringPair, api: ApiPromise) {
+  async function createCategoricalMarket(signer: KeyringPair, api: ApiPromise) {
     const params: CreateMarketParams<typeof zeitgeistSDK> = {
       baseAsset: { Ztg: null },
       signer,
@@ -73,47 +76,62 @@ describe('zrml-swaps Runtime Calls', function () {
     return parseInt(marketID.toString());
   }
 
-  // TODO
-  it('Should join a pool', async function () {
-    // Create Market
-    const SUDO = sudo();
-    const marketId = await createCategoricalMarketWithPool(SUDO, api);
+  // @note: pool_exit is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should exit a pool', async function () { });
 
-    // Smart contract purchases market set
+  // @note: pool_exit_with_exact_asset_amount is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should exit a pool with an exact asset amount', async function () { });
+
+  // @note: pool_exit_with_exact_pool_amount is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should exit a pool with an exact pool amount', async function () { });
+
+  // @note: pool_exit is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should join a pool', async function () { });
+
+  // @note: pool_join_with_exact_asset_amount is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should join a pool with an exact asset amount', async function () { });
+
+  // @note: pool_join_with_exact_pool_amount is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should join a pool with an exact pool amount', async function () { });
+
+  // @note: swap_exact_amount_in is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should swap an exact amount in', async function () { });
+
+  // @note: swap_exact_amount_in is blocked with "1010: Invalid Transaction: Transaction call is not expected"
+  it.skip('Should swap an exact amount out', async function () { });
+
+  // TODO:
+  // It's proving quite difficult to create a swap data structure without any available tests.
+  it.skip('Should force a pool exit', async function () {
+    /*
+    const SUDO = sudo();
+
+    // Creates market 0
+    await createCategoricalMarket(SUDO, api);
+
+    // Creates open pool at 0
     {
-      const { gasRequired } = await contract.query.buyCompleteSet(
-        SUDO.address, maxWeight2(api), marketId, ZTG.mul(10).toString()
-      );
-      await new Promise(async (resolve, _) => {
-        await contract.tx
-          .buyCompleteSet(createGas(api, gasRequired), marketId, ZTG.mul(10).toString())
-          .signAndSend(sudo(), async (res) => {
-            if (res.status.isInBlock) resolve(null);
-          });
+      const keyValue = api.createType('(StorageKey, StorageData)', [ENCODED_STORAGE_KEY, ENCODED_STORAGE_DATA]);
+      const sudoTx = api.tx.sudo.sudo(api.tx.system.setStorage([keyValue]));
+      await new Promise(async (resolve) => {
+        await sudoTx.signAndSend(SUDO, ({ status }) => { if (status.isInBlock || status.isFinalized) resolve(null) });
       });
       await waitBlocks(api, 2);
     }
-
-    // Contract joins market
-    // let foundEvent = false;
-    // const parameters = [poolId, poolAmount, maxAssetsIn];
-    // console.log('PARAMETERS:', parameters);
-    // const { gasRequired } = await contract.query.poolJoin(SUDO.address, maxWeight2(api), ...parameters);
-    // await new Promise(async (resolve, _) => {
-    //   await contract.tx
-    //     .poolJoin(createGas(api, gasRequired), ...parameters)
-    //     .signAndSend(sudo(), async (res) => {
-    //       if (res.status.isInBlock) {
-    //         res.events.forEach(({ event: { data, method, section } }) => {
-    //           if (section === 'neoSwaps' && method === 'JoinExecuted') {
-    //             foundEvent = true;
-    //           }
-    //         });
-    //         resolve(null);
-    //       }
-    //     });
-    // });
-
-    // expect(foundEvent).to.be.true;
+    */
   });
 });
+
+type Pool = {
+  assets: [],
+  status: { open?: {}, closed?: {} },
+  swapFee: number,
+  totalWeight: number,
+  weights: any
+}
+
+/*
+
+
+
+*/

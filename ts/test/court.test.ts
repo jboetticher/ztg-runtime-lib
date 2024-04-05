@@ -544,7 +544,7 @@ describe('zrml-court Runtime Calls', function () {
   });
 
   // create court -> votes -> reveals -> sudo closes -> reassign court stakes
-  it.only('Should resassign court stakes', async function () {
+  it('Should resassign court stakes', async function () {
     // Creates vote data
     const SUDO = sudo();
     const voteItem = { Outcome: { Categorical: 0 } };
