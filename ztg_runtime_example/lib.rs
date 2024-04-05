@@ -79,6 +79,7 @@ mod ztg_runtime_example {
 
         // region: Swaps
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_exit(
             &mut self,
@@ -95,11 +96,12 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_exit_with_exact_asset_amount(
             &mut self,
             pool_id: PoolId,
-            asset: ZeitgeistAsset, // TODO: figure out of AssetOf<T> is this value
+            asset: ZeitgeistAsset,
             asset_amount: Balance,
             max_pool_amount: Balance,
         ) -> Result<()> {
@@ -115,11 +117,12 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_exit_with_exact_pool_amount(
             &mut self,
             pool_id: PoolId,
-            asset: ZeitgeistAsset, // TODO: figure out of AssetOf<T> is this value
+            asset: ZeitgeistAsset,
             pool_amount: Balance,
             min_asset_amount: Balance,
         ) -> Result<()> {
@@ -135,6 +138,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_join(
             &mut self,
@@ -151,6 +155,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_join_with_exact_asset_amount(
             &mut self,
@@ -171,6 +176,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn pool_join_with_exact_pool_amount(
             &mut self,
@@ -191,6 +197,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn swap_exact_amount_in(
             &mut self,
@@ -213,6 +220,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Disabled
         #[ink(message)]
         pub fn swap_exact_amount_out(
             &mut self,
@@ -354,6 +362,7 @@ mod ztg_runtime_example {
                 .map_err(Into::<Error>::into)
         }
 
+        /// @note: Requires SUDO
         #[ink(message)]
         pub fn set_inflation(&mut self, inflation: Perbill) -> Result<()> {
             self.env()

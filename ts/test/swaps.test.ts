@@ -100,8 +100,8 @@ describe('zrml-swaps Runtime Calls', function () {
   // @note: swap_exact_amount_in is blocked with "1010: Invalid Transaction: Transaction call is not expected"
   it.skip('Should swap an exact amount out', async function () { });
 
-  // TODO:
-  // It's proving quite difficult to create a swap data structure without any available tests.
+  // NOTE: it's proving quite difficult to create a swap data structure without any available extrinsics
+  // TODO: implement this extrinsic test
   it.skip('Should force a pool exit', async function () {
     /*
     const SUDO = sudo();

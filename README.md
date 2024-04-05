@@ -31,10 +31,16 @@ https://github.com/paritytech/substrate/blob/033d4e86cc7eff0066cd376b9375f815761
 AssetManager            COMPLETE
 Authorized              COMPLETE BAR SUDO
 Court                   COMPLETE BAR SUDO & EXIT
-Swaps                   IN PROGRESS
+Swaps                   NOT COMPLETING
 PredictionMarkets       COMPLETE BAR SUDO
 Styx                    COMPLETE BAR SUDO
 GlobalDisputes          COMPLETE
 NeoSwaps                COMPLETE
 Orderbook               COMPLETE
 Parimutuel              COMPLETE
+
+## Contribution
+There are still areas of contribution:  
+- Implement storage layout for the `Range` type  
+- Implement storage layout for `[u8; 50]`  
+- Implement storage layout for `RangeInclusive`  
