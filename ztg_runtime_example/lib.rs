@@ -1,13 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[ink::contract]
 mod ztg_runtime_example {
+    use ztg_runtime_lib::{primitives::*, runtime_structs::*};
     use ink::env::Error as EnvError;
     use sp_runtime::Perbill;
-    use ztg_runtime_lib::primitives::{AssetIndexType, MarketId, OrderId, *};
-    use ztg_runtime_lib::runtime_structs::{
-        AssetManagerCall, AuthorizedCall, CourtCall, GlobalDisputesCall, NeoSwapsCall,
-        OrderbookCall, ParimutelCall, PredictionMarketsCall, RuntimeCall, StyxCall, SwapsCall,
-    };
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]

@@ -7,6 +7,23 @@ pub type BlockNumber = u32;
 
 use crate::primitives::*;
 
+/// The base enum for creating runtime calls in Zeitgeist.  
+/// 
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// # use ztg_runtime_lib::{primitives::*, runtime_structs::*};
+/// const result = self.env()
+///     .call_runtime(&RuntimeCall::AssetManager(AssetManagerCall::Transfer {
+///         dest: dest.into(),
+///         currency_id: ZeitgeistAsset::Ztg,
+///         amount
+///     }));
+/// ```
+///
+/// This will call the assetManager.transfer extrinsic.
 #[derive(scale::Encode, scale::Decode)]
 pub enum RuntimeCall {
     // This index can be found by investigating runtime configuration. You can check the

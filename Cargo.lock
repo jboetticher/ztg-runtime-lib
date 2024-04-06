@@ -6522,7 +6522,6 @@ name = "ztg_runtime_lib"
 version = "0.1.0"
 dependencies = [
  "ink",
- "ink_e2e",
  "parity-scale-codec",
  "scale-info",
  "sp-io 30.0.0",

@@ -1,46 +1,86 @@
 # Zeitgeist Runtime Library
 
-- Look at `benchmarks.rs` to see how they set up (fill_pool etc)
-- zeitgeistpm/app-docker will create a local environment
+The Zeitgeist Runtime Library allows ink! developers to make runtime calls to Zeitgeist's special pallets with ease.  
 
-Your battery station password was `zeitgeist`
+This library was built in ink! version 4.3.0. 
 
-## Running e2e Tests
-Specify a Zeitgeist node:  
+## Features
+
+Runtime calls in ink! are made with enums that map a pallet's index and extrinsics. This library provides you with a `RuntimeCall` enum that encodes extrinsics from ten pallets:  
+
+- AssetManager (Incomplete)
+- Authorized
+- Court
+- Swaps (Legacy)
+- PredictionMarkets
+- Styx
+- GlobalDisputes
+- NeoSwaps
+- Orderbook
+- Parimutuel
+
+Zeitgeist specific data structures are also available for developers to use when making these runtime calls.  
+
+### Examples
+
+You can make a runtime call in the following format:  
+
+```rust
+const result = self.env()
+    .call_runtime(&RuntimeCall::AssetManager(AssetManagerCall::Transfer {
+        dest: dest.into(),
+        currency_id: ZeitgeistAsset::Ztg,
+    amount
+}));
+```
+
+For an example of every runtime call being made, reference the `ztg_runtime_example` ink! smart contract. This contract has one function for each runtime call. Note that not every runtime call can be successfully made as some extrinsics must be called via sudo, through a committee, or are otherwise disabled.  
+
+## Tests
+The testing environment for this package manually tests the calls within a live Zeitgeist development node. The tests themselves are written in TypeScript with the Mocha framework.    
+
+### Setup
+
+The testing folder is in `ts`. Install dependencies with Node (v18):  
 
 ```
-export CONTRACTS_NODE=/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist
+cd ts
+npm install
 ```
 
-Run node:
+To set up the testing environment, you must set environment variables & generate a chain spec.  
+
+There are three environment variables that must be set within a new file `ts/.env`, each with require a complete path:  
 
 ```
-/Users/jb/Desktop/polkadot/zeitgeist/target/release/zeitgeist --tmp --alice --validator --chain=/Users/jb/Desktop/polkadot/ztg-runtime-lib/ts/spec/customSpecRaw.json
+PATH_TO_NODE=[COMPLETE_PATH_TO_ZEITGEIST_NODE]
+PATH_TO_CUSTOM_SPEC=[COMPLETE_PATH_TO_ZEITGEIST_SPEC]
+PATH_TO_CUSTOM_RAW_SPEC=[COMPLETE_PATH_TO_ZEITGEIST_RAW_SPEC]
 ```
 
-## Polkadot JS Contracts
+Then, to generate a chain spec, run the following command:  
 
-How to query with WeightsV2:
-https://substrate.stackexchange.com/a/7275/4422
+```
+npm run spec
+```
 
-## Polkadot JS Contracts
-https://github.com/paritytech/substrate/blob/033d4e86cc7eff0066cd376b9375f815761d653c/frame/contracts/src/lib.rs#L963
+A custom chain spec is required as there are assumptions within the TypeScript tests that the chain spec satisfy.  
 
-## Finished Tests
+### Running
 
-AssetManager            COMPLETE
-Authorized              COMPLETE BAR SUDO
-Court                   COMPLETE BAR SUDO & EXIT
-Swaps                   NOT COMPLETING
-PredictionMarkets       COMPLETE BAR SUDO
-Styx                    COMPLETE BAR SUDO
-GlobalDisputes          COMPLETE
-NeoSwaps                COMPLETE
-Orderbook               COMPLETE
-Parimutuel              COMPLETE
+The TypeScript tests will automatically run and shut off instances of the Zeitgeist node, so long as the environment variables were correctly set. You can run the tests with the following:  
+
+```
+npm run test
+```
+
+### Skipped Tests
+
+Some tests will be skipped. Some require either SUDO or a committee call to be completed, so in effect the runtime call will never be used by a smart contract. The `swaps` tests are skipped due to current versions of the Zeitgeist runtime locking them.  
 
 ## Contribution
 There are still areas of contribution:  
 - Implement storage layout for the `Range` type  
 - Implement storage layout for `[u8; 50]`  
 - Implement storage layout for `RangeInclusive`  
+- Upgrade to ink! v5
