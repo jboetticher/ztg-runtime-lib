@@ -7,15 +7,32 @@ pub type BlockNumber = u32;
 
 use crate::primitives::*;
 
+/// The base enum for creating runtime calls in Zeitgeist.  
+/// 
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// # use ztg_runtime_lib::{primitives::*, runtime_structs::*};
+/// const result = self.env()
+///     .call_runtime(&RuntimeCall::AssetManager(AssetManagerCall::Transfer {
+///         dest: dest.into(),
+///         currency_id: ZeitgeistAsset::Ztg,
+///         amount
+///     }));
+/// ```
+///
+/// This will call the assetManager.transfer extrinsic.
 #[derive(scale::Encode, scale::Decode)]
 pub enum RuntimeCall {
-    /// This index can be found by investigating runtime configuration. You can check the
-    /// pallet order inside `construct_runtime!` block and read the position of your
-    /// pallet (0-based).
-    ///
-    /// https://github.com/zeitgeistpm/zeitgeist/blob/7ea631dbff5ea519a970c5bc0f3d3d143849d3b9/runtime/common/src/lib.rs#L274-L330
-    ///
-    /// [See here for more.](https://substrate.stackexchange.com/questions/778/how-to-get-pallet-index-u8-of-a-pallet-in-runtime)
+    // This index can be found by investigating runtime configuration. You can check the
+    // pallet order inside `construct_runtime!` block and read the position of your
+    // pallet (0-based).
+    //
+    // https://github.com/zeitgeistpm/zeitgeist/blob/7ea631dbff5ea519a970c5bc0f3d3d143849d3b9/runtime/common/src/lib.rs#L274-L330
+    //
+    // [See here for more.](https://substrate.stackexchange.com/questions/778/how-to-get-pallet-index-u8-of-a-pallet-in-runtime)
     #[codec(index = 40)]
     AssetManager(AssetManagerCall),
     #[codec(index = 51)]
@@ -161,7 +178,7 @@ pub enum SwapsCall {
     PoolExitWithExactAssetAmount {
         #[codec(compact)]
         pool_id: PoolId,
-        asset: ZeitgeistAsset, // TODO: figure out of AssetOf<T> is this value
+        asset: ZeitgeistAsset,
         #[codec(compact)]
         asset_amount: Balance,
         #[codec(compact)]
@@ -497,7 +514,6 @@ pub enum GlobalDisputesCall {
     }
 }
 
-// TODO: ensure that the ZeitgeistAsset is the same as AssetOf = Asset<MarketIdOf<T>>,
 /// Calls for interacting with LMSR liquidity pools.  
 /// https://github.com/zeitgeistpm/zeitgeist/tree/release-v0.5.0/zrml/neo-swaps
 #[derive(scale::Encode, scale::Decode)]

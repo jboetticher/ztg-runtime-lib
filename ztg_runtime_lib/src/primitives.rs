@@ -3,14 +3,15 @@ use core::ops::{Range, RangeInclusive};
 #[cfg(feature = "std")]
 use ink::storage::traits::StorageLayout;
 
+pub type CourtId = u128;
+pub type CourtHash = [u8; 32];
 pub type PoolId = u128;
 pub type MarketId = u128;
 pub type OrderId = u128;
-
-// region: ZEITGEIST AUTHORITY
-
+pub type AssetIndexType = u16;
 pub type CategoryIndex = u16;
 
+/// A representation of a market's outcome.
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum OutcomeReport {
@@ -18,13 +19,7 @@ pub enum OutcomeReport {
     Scalar(u128),
 }
 
-// endregion
-
-// region: ZEITGEIST COURT
-
-pub type CourtId = u128;
-pub type CourtHash = [u8; 32];
-
+/// A vote for use in court.
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum VoteItem {
@@ -32,23 +27,7 @@ pub enum VoteItem {
     Binary(bool),
 }
 
-// endregion
-
-// region: ZEITGEIST MARKET
-
-// TODO: implement storage layout for "Range"
 /// Defines whether the period is represented as a blocknumber or a timestamp.
-///
-/// ****** IMPORTANT *****
-///
-/// Must be an exclusive range because:
-///
-/// 1. `zrml_predition_markets::Pallet::admin_move_market_to_closed` uses the current block as the
-/// end period.
-/// 2. The liquidity mining pallet takes into consideration the different between the two blocks.
-/// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
-/// 3. With inclusive ranges it is not possible to express empty ranges and this feature
-/// mostly conflicts with existent tests and corner cases.
 #[derive(Clone, Decode, Encode, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum MarketPeriod {
@@ -65,7 +44,7 @@ pub struct Deadlines {
     pub dispute_duration: u64
 }
 
-// TODO: implement storage layout for "[u8; 50]"
+/// Defines the hash of metadata stored for a market.
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum MultiHash {
@@ -84,7 +63,6 @@ pub enum MarketCreation {
     Advised,
 }
 
-// TODO: implement StorageLayout for "RangeInclusive"
 /// Defines the type of market.
 /// All markets also have themin_assets_out `Invalid` resolution.
 #[derive(Clone, Decode, Encode, PartialEq, Eq)]
@@ -105,6 +83,7 @@ pub enum MarketDisputeMechanism {
     SimpleDisputes,
 }
 
+/// The scoring methodology for a market.
 #[derive(Clone, Decode, Encode, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
 pub enum ScoringRule {
@@ -113,6 +92,7 @@ pub enum ScoringRule {
     Parimutuel
 }
 
+/// A type of asset.
 #[derive(scale::Encode, scale::Decode, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub enum ZeitgeistAsset {
@@ -124,7 +104,3 @@ pub enum ZeitgeistAsset {
     ForeignAsset(u32),
     ParimutuelShare(u128, u16)
 }
-
-// endregion
-
-pub type AssetIndexType = u16;
