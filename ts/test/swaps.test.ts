@@ -20,10 +20,10 @@ describe('zrml-swaps Runtime Calls', function () {
   let process: ChildProcess;
 
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
-    // contract = await deployTestContract(api);
+    contract = await deployTestContract(api);
 
     // Initialize Zeitgeist SDK for local
     zeitgeistSDK = await create({
@@ -32,14 +32,14 @@ describe('zrml-swaps Runtime Calls', function () {
     });
 
     // Send cash to contract
-    // const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000_000n);
-    // await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
-    // await waitBlocks(api, 2);
+    const transfer = api.tx.balances.transfer(contract.address, 5_000_000_000_000_000n);
+    await transfer.signAndSend(new Keyring({ type: 'sr25519' }).addFromUri('//Alice'));
+    await waitBlocks(api, 2);
   });
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
   async function createCategoricalMarket(signer: KeyringPair, api: ApiPromise) {

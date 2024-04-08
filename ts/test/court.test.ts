@@ -29,7 +29,7 @@ describe('zrml-court Runtime Calls', function () {
   court should occur last.
   */
   this.beforeAll(async function () {
-    // process = startNode();
+    process = startNode();
     await cryptoWaitReady();
     ({ api } = await getAPI());
     contract = await deployTestContract(api);
@@ -49,7 +49,7 @@ describe('zrml-court Runtime Calls', function () {
 
   this.afterAll(async function () {
     await api.disconnect();
-    // process.kill('SIGTERM');
+    process.kill('SIGTERM');
   });
 
   // create -> close -> report -> dispute

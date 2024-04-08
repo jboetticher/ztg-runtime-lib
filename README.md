@@ -44,6 +44,7 @@ The testing environment for this package manually tests the calls within a live 
 The testing folder is in `ts`. Install dependencies with Node (v18):  
 
 ```
+cargo build
 cd ts
 npm install
 ```

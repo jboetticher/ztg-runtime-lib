@@ -29,7 +29,7 @@ export const startNode = () => {
     ['--tmp', `--chain=${PATH_TO_CUSTOM_SPEC}`, '--alice', '--validator'],
     // ['--dev'],
     {
-      stdio: 'inherit', // To show node output in the console
+      // stdio: 'inherit', // To show node output in the console
     });
 
   console.log(`Node started with PID: ${nodeProcess.pid}`);
